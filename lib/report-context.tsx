@@ -1,0 +1,47 @@
+"use client"
+
+import type React from "react"
+import { createContext, useContext, useState } from "react"
+
+export interface ReportData {
+  category?: string
+  address?: string
+  city?: string
+  pincode?: string
+  description?: string
+  urgency?: "Low" | "Medium" | "High"
+  photoUrl?: string
+  tokenId?: string
+}
+
+interface ReportContextType {
+  reportData: ReportData
+  updateReportData: (data: Partial<ReportData>) => void
+  resetReport: () => void
+}
+
+const ReportContext = createContext<ReportContextType | undefined>(undefined)
+
+export function ReportProvider({ children }: { children: React.ReactNode }) {
+  const [reportData, setReportData] = useState<ReportData>({})
+
+  const updateReportData = (data: Partial<ReportData>) => {
+    setReportData((prev) => ({ ...prev, ...data }))
+  }
+
+  const resetReport = () => {
+    setReportData({})
+  }
+
+  return (
+    <ReportContext.Provider value={{ reportData, updateReportData, resetReport }}>{children}</ReportContext.Provider>
+  )
+}
+
+export function useReport() {
+  const context = useContext(ReportContext)
+  if (undefined === context) {
+    throw new Error("useReport must be used within ReportProvider")
+  }
+  return context
+}

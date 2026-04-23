@@ -1,0 +1,169 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* <CHANGE> Updated color tokens to match Fix My City design system */
+:root {
+  /* Light Mode - Soft professional palette */
+  --background: #f7faff;
+  --foreground: #0f1724;
+  --card: #ffffff;
+  --card-foreground: #0f1724;
+  --popover: #ffffff;
+  --popover-foreground: #0f1724;
+  --primary: #2d6df6;
+  --primary-foreground: #ffffff;
+  --secondary: #e8f1ff;
+  --secondary-foreground: #2d6df6;
+  --muted: #e2e8f0;
+  --muted-foreground: #64748b;
+  --accent: #4aae88;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #f1f5f9;
+  --ring: #2d6df6;
+  --chart-1: #2d6df6;
+  --chart-2: #4aae88;
+  --chart-3: #f59e0b;
+  --chart-4: #8b5cf6;
+  --chart-5: #ec4899;
+  --radius: 1rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f1724;
+  --sidebar-primary: #2d6df6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #4aae88;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #2d6df6;
+}
+
+.dark {
+  /* Dark Mode - Deep teal/blue palette */
+  --background: #0b1220;
+  --foreground: #e6eef8;
+  --card: #0f1724;
+  --card-foreground: #e6eef8;
+  --popover: #0f1724;
+  --popover-foreground: #e6eef8;
+  --primary: #2d6df6;
+  --primary-foreground: #0b1220;
+  --secondary: #1f3a5f;
+  --secondary-foreground: #2d6df6;
+  --muted: #1f2937;
+  --muted-foreground: #9ca3af;
+  --accent: #1f6e56;
+  --accent-foreground: #e6eef8;
+  --destructive: #f87171;
+  --destructive-foreground: #0b1220;
+  --border: #1f2937;
+  --input: #1f3a5f;
+  --ring: #2d6df6;
+  --chart-1: #60a5fa;
+  --chart-2: #4ade80;
+  --chart-3: #fbbf24;
+  --chart-4: #a78bfa;
+  --chart-5: #f472b6;
+  --sidebar: #0f1724;
+  --sidebar-foreground: #e6eef8;
+  --sidebar-primary: #2d6df6;
+  --sidebar-primary-foreground: #0b1220;
+  --sidebar-accent: #1f6e56;
+  --sidebar-accent-foreground: #e6eef8;
+  --sidebar-border: #1f2937;
+  --sidebar-ring: #2d6df6;
+}
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-devanagari: var(--font-devanagari);
+  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* <CHANGE> Typography scale for better hierarchy */
+  h1 {
+    @apply text-4xl md:text-5xl font-bold leading-tight;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl font-bold leading-tight;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl font-semibold leading-tight;
+  }
+
+  h4 {
+    @apply text-xl md:text-2xl font-semibold;
+  }
+
+  p {
+    @apply text-base md:text-lg leading-relaxed;
+  }
+
+  /* <CHANGE> Hindi text uses Noto Sans Devanagari */
+  .devanagari {
+    @apply font-devanagari;
+  }
+}
+
+/* <CHANGE> Theme toggle animation */
+@keyframes theme-transition {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+html {
+  animation: theme-transition 0.3s ease-out;
+}
