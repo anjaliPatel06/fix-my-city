@@ -12,31 +12,58 @@ export function PhotoUploadPage() {
   const router = useRouter()
   const { reportData, updateReportData } = useReport()
   const [uploadState, setUploadState] = useState<UploadState>("idle")
-  const [uploadProgress, setUploadProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      simulateUpload(file)
+      processPhotoWithAI(file)
     }
   }
 
-  const simulateUpload = (file: File) => {
+  const processPhotoWithAI = async (file: File) => {
     setUploadState("uploading")
-    setUploadProgress(0)
+    // Convert file to base64
+    const reader = new FileReader()
+    reader.onloadend = async () => {
+      const base64data = reader.result as string
+      
+      try {
+        const analyzeRes = await fetch("/api/analyze-photo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64: base64data })
+        })
+        const analyzeData = await analyzeRes.json()
 
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setUploadState("success")
-          updateReportData({ photoUrl: URL.createObjectURL(file) })
-          return 100
+        let extractedUpdates = {}
+        if (analyzeData.success && analyzeData.data) {
+          const d = analyzeData.data
+          extractedUpdates = {
+            category: d.category && d.category !== "Unknown" ? d.category : reportData.category,
+            description: d.description && d.description !== "Extracting..." ? d.description : reportData.description,
+            address: d.address && d.address !== "Extracting..." ? d.address : reportData.address,
+            city: d.city && d.city !== "Extracting..." ? d.city : reportData.city,
+            pincode: d.pincode && d.pincode !== "Extracting..." ? d.pincode : reportData.pincode,
+            urgency: d.urgency && d.urgency !== "Extracting..." ? d.urgency : reportData.urgency
+          }
         }
-        return prev + Math.random() * 40
-      })
-    }, 400)
+
+        // Apply state updates properly without triggering the React crash
+        updateReportData({ 
+          photoUrl: URL.createObjectURL(file), // Provide local preview
+          ...extractedUpdates
+        })
+        
+        setUploadState("success")
+      } catch (err) {
+        console.error("Failed to analyze photo:", err)
+        // Set success anyway so user can continue without AI blocking them
+        updateReportData({ photoUrl: URL.createObjectURL(file) })
+        setUploadState("success")
+      }
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleCapture = () => {
@@ -76,14 +103,10 @@ export function PhotoUploadPage() {
               <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4 animate-pulse">
                 <Loader className="w-10 h-10 text-primary animate-spin" />
               </div>
-              <p className="text-lg font-semibold mb-4">Uploading...</p>
-              <div className="w-full max-w-xs h-2 bg-border rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">{Math.round(uploadProgress)}%</p>
+              <p className="text-lg font-semibold mb-4 text-center">
+                AI is analyzing your photo...<br/>
+                <span className="text-sm font-normal text-muted-foreground mt-2 inline-block">Extracting location, issue type, and urgency...</span>
+              </p>
             </div>
           )}
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useReport } from "@/lib/report-context"
 import { PhoneOff, Mic, MicOff, ArrowRight } from "lucide-react"
@@ -20,31 +20,50 @@ export function AICallingPage() {
   const router = useRouter()
   const { updateReportData } = useReport()
   const [callState, setCallState] = useState<CallState>("connecting")
+  const callStateRef = useRef<CallState>("connecting")
   const [callDuration, setCallDuration] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
+  const isMutedRef = useRef(false)
   const [showConversation, setShowConversation] = useState(false)
 
-  // Simulated extracted data from AI call
-  const [extractedData] = useState<ExtractedData>({
-    category: "Pothole - Road Damage",
-    address: "Main Street, Market Area",
-    city: "Mumbai",
-    pincode: "400001",
-    description: "Large pothole on Main Street near the market causing traffic issues",
-    urgency: "High",
+  const [extractedData, setExtractedData] = useState<ExtractedData>({
+    category: "Extracting...",
+    address: "Extracting...",
+    city: "Extracting...",
+    pincode: "...",
+    description: "Listening...",
+    urgency: "Medium",
   })
 
-  // Simulate call progression
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (callState === "connecting") {
-        setCallState("on-call")
-      }
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [callState])
+  const [history, setHistory] = useState<{ role: string; content: string }[]>([])
+  const historyRef = useRef<{ role: string; content: string }[]>([])
+  const [conversation, setConversation] = useState<{ role: string; content: string }[]>([])
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const isSpeakingRef = useRef(false)
 
-  // Update call duration
+
+  useEffect(() => {
+    historyRef.current = history
+    callStateRef.current = callState
+    isMutedRef.current = isMuted
+    isSpeakingRef.current = isSpeaking
+  }, [history, callState, isMuted, isSpeaking])
+
+  // Start call manually to bypass autoplay restrictions that block audio
+  const handleStartCall = () => {
+    setCallState("on-call")
+    
+    // 1. Synchronously unlock browser speech engine on user click
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel()
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(""))
+    }
+
+    // Trigger immediately so browser knows it's a direct user action allowing mic
+    handleAgentTurn("Hello! I am the Fix My City AI assistant. What issue would you like to report today?")
+  }
+
+  // Timer loop
   useEffect(() => {
     if (callState === "on-call") {
       const interval = setInterval(() => {
@@ -54,8 +73,198 @@ export function AICallingPage() {
     }
   }, [callState])
 
+  // Send message to local backend AI model
+  const handleAgentTurn = async (initialGreeting?: string) => {
+    setIsSpeaking(true)
+    isSpeakingRef.current = true
+
+    if (initialGreeting) {
+      setConversation((prev) => [...prev, { role: "agent", content: initialGreeting }])
+      setHistory((prev) => [...prev, { role: "assistant", content: initialGreeting }])
+      await speakOutLoud(initialGreeting)
+      setIsSpeaking(false)
+      isSpeakingRef.current = false
+      startListening()
+      return
+    }
+  }
+
+  // Synthesize agent voice
+  const speakOutLoud = (text: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel() // clear any stuck voice from previous actions
+        const utterance = new SpeechSynthesisUtterance(text)
+        
+        // Prevent garbage collection bug in Chrome which causes onend to fail
+        ;(window as any).currentUtterance = utterance;
+        
+        // Ensure browser speaks by picking a common fallback language if Hindi is not installed
+        utterance.lang = "en-IN"
+        utterance.rate = 1.0
+
+        let isResolved = false;
+        
+        // 10 second fallback incase the speech engine hangs
+        const fallbackTimer = setTimeout(() => {
+          if (!isResolved) {
+             isResolved = true;
+             console.warn("Speech API hung up. Using fallback timeout.");
+             resolve();
+          }
+        }, 10000);
+
+        utterance.onend = () => {
+          if (!isResolved) {
+            isResolved = true;
+            clearTimeout(fallbackTimer);
+            resolve();
+          }
+        }
+        
+        utterance.onerror = (e) => {
+          console.warn("Speech warning/error:", e)
+          if (!isResolved) {
+            isResolved = true;
+            clearTimeout(fallbackTimer);
+            resolve();
+          }
+        }
+
+        console.log("AI is speaking:", text)
+        window.speechSynthesis.speak(utterance)
+      } else {
+        resolve()
+      }
+    })
+  }
+
+  const isMicRef = useRef(false)
+
+  // Use Native Web Speech API without any external packages
+  const startListening = () => {
+    if (isMicRef.current) return; // Prevent overlapping mic instances
+    
+    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
+      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
+      const recognition = new SpeechRecognition()
+      // Fallback native language
+      recognition.lang = "en-IN" 
+      recognition.interimResults = false
+      recognition.maxAlternatives = 1
+      recognition.continuous = false;
+
+      let hasRecognized = false;
+
+      recognition.onresult = async (event: any) => {
+        hasRecognized = true;
+        const transcript = event.results[0][0].transcript.trim()
+        console.log("User said:", transcript)
+        
+        if (!transcript) {
+           isMicRef.current = false
+           startListening()
+           return
+        }
+        
+        setConversation((prev) => [...prev, { role: "user", content: transcript }])
+        
+        // Pass to Backend Model ONLY
+        try {
+          // Pause mic while checking backend
+          recognition.stop()
+          setIsSpeaking(true)
+          isSpeakingRef.current = true // Treat backend processing + speaking as 'speaking' phase to block double-listening
+          
+          const res = await fetch("/api/voice-agent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ history: historyRef.current, userMessage: transcript }),
+          })
+          const data = await res.json()
+          
+          if (data.success && data.data) {
+             const { agent_reply, extracted, complete } = data.data
+             
+             // Update UI with real extracted data occasionally. Don't overwrite existing good data with "Extracting..."
+             setExtractedData(prev => ({
+                category: extracted.category && extracted.category !== "Extracting..." ? extracted.category : prev.category,
+                address: extracted.address && extracted.address !== "Extracting..." ? extracted.address : prev.address,
+                city: extracted.city && extracted.city !== "Extracting..." ? extracted.city : prev.city,
+                pincode: extracted.pincode && extracted.pincode !== "Extracting..." ? extracted.pincode : prev.pincode,
+                description: extracted.description && extracted.description !== "Extracting..." ? extracted.description : prev.description,
+                urgency: extracted.urgency && extracted.urgency !== "Extracting..." ? extracted.urgency : prev.urgency
+             }))
+
+             setConversation((prev) => [...prev, { role: "agent", content: agent_reply }])
+             setHistory((prev) => [
+                ...prev, 
+                { role: "user", content: transcript },
+                { role: "assistant", content: agent_reply }
+             ])
+
+             await speakOutLoud(agent_reply)
+
+             setIsSpeaking(false)
+             isSpeakingRef.current = false // Ready to listen again
+             if (complete) {
+               setTimeout(() => setCallState("completed"), 2000)
+             } else {
+               // keep listening after speaking
+               startListening()
+             }
+          } else {
+             console.warn("API returned error/false:", data)
+             await speakOutLoud("I didn't quite catch that.")
+             isSpeakingRef.current = false
+             startListening()
+          }
+        } catch (error) {
+          console.warn("API fetch exception:", error)
+          await speakOutLoud("I didn't quite catch that.")
+          isSpeakingRef.current = false
+          startListening()
+        }
+      }
+
+      recognition.onerror = (e: any) => {
+        isMicRef.current = false
+        console.warn("Mic status/warning:", e.error)
+        if (e.error === 'no-speech' || e.error === 'aborted') {
+           // Handled by onend gracefully
+           return;
+        }
+        // Auto retry listening on error if not muted
+        setTimeout(() => {
+          if (!isSpeakingRef.current && callStateRef.current === "on-call") startListening()
+        }, 2000)
+      }
+
+      recognition.onend = () => {
+         isMicRef.current = false
+         // If mic stopped but we didn't catch words and we aren't currently waiting on AI
+         if (!hasRecognized && !isMutedRef.current && !isSpeakingRef.current && callStateRef.current === "on-call") {
+             console.log("Mic went quiet, restarting...")
+             startListening()
+         }
+      }
+
+      if (!isMutedRef.current && !isSpeakingRef.current && callStateRef.current === "on-call") {
+        console.log("Mic started listening...")
+        isMicRef.current = true
+        try {
+          recognition.start()
+        } catch(e) {
+          isMicRef.current = false
+          console.warn("Could not start mic:", e)
+        }
+      }
+    }
+  }
+
   const handleEndCall = () => {
     setCallState("completed")
+    window.speechSynthesis.cancel() // Stop talking when ended
   }
 
   const handleProceed = () => {
@@ -93,7 +302,13 @@ export function AICallingPage() {
               </div>
             </div>
 
-            <p className="text-sm text-muted-foreground">Connecting...</p>
+            <p className="text-sm text-muted-foreground mb-4">Connecting...</p>
+            <button
+              onClick={handleStartCall}
+              className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2 mx-auto"
+            >
+              Start Conversation Now <Mic className="w-5 h-5" />
+            </button>
           </div>
         )}
 
@@ -177,18 +392,15 @@ export function AICallingPage() {
 
               {showConversation && (
                 <div className="mt-4 p-3 bg-background rounded-lg max-h-40 overflow-y-auto text-xs space-y-2">
-                  <p>
-                    <span className="text-primary font-semibold">AI:</span> Hello! What issue would you like to report
-                    today?
-                  </p>
-                  <p>
-                    <span className="text-blue-600 dark:text-blue-400 font-semibold">You:</span> There's a pothole on
-                    Main Street...
-                  </p>
-                  <p>
-                    <span className="text-primary font-semibold">AI:</span> I've noted that. Can you tell me the exact
-                    location?
-                  </p>
+                  {conversation.length === 0 && <p className="text-muted-foreground text-center">Starting conversation...</p>}
+                  {conversation.map((msg, i) => (
+                    <p key={i}>
+                      <span className={msg.role === "agent" ? "text-primary font-semibold" : "text-blue-600 dark:text-blue-400 font-semibold"}>
+                        {msg.role === "agent" ? "AI" : "You"}:
+                      </span>{" "}
+                      {msg.content}
+                    </p>
+                  ))}
                 </div>
               )}
             </div>
