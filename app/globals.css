@@ -6,6 +6,8 @@
 /* <CHANGE> Updated color tokens to match Fix My City design system */
 :root {
   /* Light Mode - Soft professional palette */
+  --app-font-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --app-font-devanagari: "Nirmala UI", "Mangal", "Kohinoor Devanagari", sans-serif;
   --background: #f7faff;
   --foreground: #0f1724;
   --card: #ffffff;
@@ -78,8 +80,8 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-sans);
-  --font-devanagari: var(--font-devanagari);
+  --font-sans: var(--app-font-sans);
+  --font-devanagari: var(--app-font-devanagari);
   --font-mono: "Geist Mono", "Geist Mono Fallback";
   --color-background: var(--background);
   --color-foreground: var(--foreground);

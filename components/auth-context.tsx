@@ -1,4 +1,3 @@
-// components/auth-context.tsx
 "use client";
 
 import React, {
@@ -7,79 +6,229 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import type { AppUser, Profile, Role } from "@/lib/types";
 
-type Role = "user" | "admin";
+export type User = AppUser | null;
 
-type User = {
-  name: string;
+type LoginInput = {
+  email: string;
+  password: string;
   role: Role;
-} | null;
+};
 
-type Profile = {
-  firstName: string;
-  middleName?: string;
-  lastName?: string;
-  dob?: string;
-  gender?: string;
-  maritalStatus?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
-  country?: string;
-} | null;
+type SignupInput = {
+  name: string;
+  email: string;
+  password: string;
+};
+
+type LegacyStoredUser = {
+  name: string;
+  email: string;
+  passwordHash: string;
+  role: Role;
+  profile: Profile;
+};
 
 type AuthContextType = {
   user: User;
   profile: Profile;
-  updateProfile: (data: NonNullable<Profile>) => void;
-  loginAsUser: (name: string) => void;
-  loginAsAdmin: (name: string) => void;
+  isLoading: boolean;
+  updateProfile: (data: NonNullable<Profile>) => Promise<void>;
+  login: (input: LoginInput) => Promise<void>;
+  signup: (input: SignupInput) => Promise<void>;
   logout: () => void;
 };
 
+const LEGACY_USERS_STORAGE_KEY = "fmc_users";
+const SESSION_STORAGE_KEY = "fmc_session_user";
+const LEGACY_MIGRATION_KEY = "fmc_db_migrated";
+const AUTH_COOKIE_KEY = "fmc_auth";
+const ROLE_COOKIE_KEY = "fmc_role";
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function persistSession(nextUser: NonNullable<User>) {
+  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextUser));
+  document.cookie = `${AUTH_COOKIE_KEY}=1; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+  document.cookie = `${ROLE_COOKIE_KEY}=${nextUser.role}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+}
+
+function clearSession() {
+  window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  document.cookie = `${AUTH_COOKIE_KEY}=; path=/; max-age=0; SameSite=Lax`;
+  document.cookie = `${ROLE_COOKIE_KEY}=; path=/; max-age=0; SameSite=Lax`;
+}
+
+function readLegacyUsers(): LegacyStoredUser[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(LEGACY_USERS_STORAGE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+async function parseJsonResponse(response: Response) {
+  const data = await response.json();
+
+  if (!response.ok || data?.success === false) {
+    throw new Error(data?.error || "Request failed.");
+  }
+
+  return data;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User>(null);
   const [profile, setProfile] = useState<Profile>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // page reload hone par localStorage se profile load karo
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = window.localStorage.getItem("fmc_profile");
-    if (saved) {
-      try {
-        setProfile(JSON.parse(saved));
-      } catch {
-        // agar parse error ho jaye to ignore
+    let active = true;
+
+    const migrateLegacyUsers = async () => {
+      if (typeof window === "undefined") return;
+
+      const alreadyMigrated = window.localStorage.getItem(LEGACY_MIGRATION_KEY) === "1";
+      const legacyUsers = readLegacyUsers();
+
+      if (alreadyMigrated || legacyUsers.length === 0) {
+        return;
       }
-    }
+
+      try {
+        await fetch("/api/auth/migrate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ users: legacyUsers }),
+        });
+        window.localStorage.setItem(LEGACY_MIGRATION_KEY, "1");
+      } catch {
+        // Ignore migration failures and continue with existing session behavior.
+      }
+    };
+
+    const bootstrapAuth = async () => {
+      if (typeof window === "undefined") return;
+
+      await migrateLegacyUsers();
+
+      let nextUser: User = null;
+      let nextProfile: Profile = null;
+
+      try {
+        const savedSession = window.localStorage.getItem(SESSION_STORAGE_KEY);
+
+        if (savedSession) {
+          const parsedSession = JSON.parse(savedSession) as NonNullable<User>;
+          const response = await fetch(
+            `/api/profile?email=${encodeURIComponent(normalizeEmail(parsedSession.email))}`,
+            { cache: "no-store" },
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            nextUser = data.user ?? null;
+            nextProfile = data.profile ?? null;
+          } else {
+            clearSession();
+          }
+        }
+      } catch {
+        clearSession();
+      }
+
+      if (!active) return;
+
+      setUser(nextUser);
+      setProfile(nextProfile);
+      setIsLoading(false);
+    };
+
+    bootstrapAuth();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const updateProfile = (data: NonNullable<Profile>) => {
-    setProfile(data);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("fmc_profile", JSON.stringify(data));
-    }
+  const updateProfile = async (data: NonNullable<Profile>) => {
+    if (!user) return;
+
+    const response = await fetch("/api/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: user.email,
+        profile: data,
+      }),
+    });
+
+    const parsed = await parseJsonResponse(response);
+    setUser(parsed.user ?? user);
+    setProfile(parsed.profile ?? data);
   };
 
-  const loginAsUser = (name: string) => {
-    setUser({ name, role: "user" });
+  const login = async ({ email, password, role }: LoginInput) => {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: normalizeEmail(email),
+        password,
+        role,
+      }),
+    });
+
+    const parsed = await parseJsonResponse(response);
+    const nextUser = parsed.user as NonNullable<User>;
+
+    persistSession(nextUser);
+    setUser(nextUser);
+    setProfile(parsed.profile ?? null);
   };
 
-  const loginAsAdmin = (name: string) => {
-    setUser({ name, role: "admin" });
+  const signup = async ({ name, email, password }: SignupInput) => {
+    const response = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: name.trim(),
+        email: normalizeEmail(email),
+        password,
+      }),
+    });
+
+    const parsed = await parseJsonResponse(response);
+    const nextUser = parsed.user as NonNullable<User>;
+
+    persistSession(nextUser);
+    setUser(nextUser);
+    setProfile(parsed.profile ?? null);
   };
 
   const logout = () => {
+    if (typeof window !== "undefined") {
+      clearSession();
+    }
+
     setUser(null);
+    setProfile(null);
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, updateProfile, loginAsUser, loginAsAdmin, logout }}
+      value={{ user, profile, isLoading, updateProfile, login, signup, logout }}
     >
       {children}
     </AuthContext.Provider>

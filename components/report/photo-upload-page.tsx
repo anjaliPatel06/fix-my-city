@@ -32,7 +32,17 @@ export function PhotoUploadPage() {
         const analyzeRes = await fetch("/api/analyze-photo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: base64data })
+          body: JSON.stringify({
+            imageBase64: base64data,
+            description: reportData.description || "",
+            existingFields: {
+              category: reportData.category || "",
+              address: reportData.address || "",
+              city: reportData.city || "",
+              pincode: reportData.pincode || "",
+              urgency: reportData.urgency || "",
+            },
+          })
         })
         const analyzeData = await analyzeRes.json()
 
@@ -45,13 +55,14 @@ export function PhotoUploadPage() {
             address: d.address && d.address !== "Extracting..." ? d.address : reportData.address,
             city: d.city && d.city !== "Extracting..." ? d.city : reportData.city,
             pincode: d.pincode && d.pincode !== "Extracting..." ? d.pincode : reportData.pincode,
-            urgency: d.urgency && d.urgency !== "Extracting..." ? d.urgency : reportData.urgency
+            urgency: d.urgency && d.urgency !== "Extracting..." ? d.urgency : reportData.urgency,
+            departmentPrediction: d.departmentPrediction || reportData.departmentPrediction,
           }
         }
 
         // Apply state updates properly without triggering the React crash
         updateReportData({ 
-          photoUrl: URL.createObjectURL(file), // Provide local preview
+          photoUrl: base64data,
           ...extractedUpdates
         })
         
@@ -59,7 +70,7 @@ export function PhotoUploadPage() {
       } catch (err) {
         console.error("Failed to analyze photo:", err)
         // Set success anyway so user can continue without AI blocking them
-        updateReportData({ photoUrl: URL.createObjectURL(file) })
+        updateReportData({ photoUrl: base64data })
         setUploadState("success")
       }
     }

@@ -2,18 +2,20 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useTheme } from "@/lib/theme-provider"
 import { translations } from "@/lib/i18n"
 import { Menu, X, Sun, Moon } from "lucide-react"
 import { useAuth } from "@/components/auth-context"
 
 export function Header() {
+  const router = useRouter()
   const { theme, language, toggleTheme, setLanguage } = useTheme()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [profileModalOpen, setProfileModalOpen] = useState(false)  
   const t = translations[language]
-  const {user,logout,profile} = useAuth();
+  const {user,logout,profile,isLoading} = useAuth();
   
   const avatarInitial =
     (profile?.firstName && profile.firstName.trim().charAt(0).toUpperCase()) ||
@@ -31,6 +33,13 @@ export function Header() {
 
   const toggleLanguage = () => {
     setLanguage(language === "en" ? "hi" : "en")
+  }
+
+  const handleLogout = () => {
+    logout()
+    setProfileOpen(false)
+    setProfileModalOpen(false)
+    router.push("/login")
   }
 
   return (
@@ -142,12 +151,12 @@ export function Header() {
             </button>
              
              {/* Login Button */}
-{!user && (
+{!user && !isLoading && (
   <Link
     href="/login"
     className="px-4 py-2 rounded-lg text-sm font-medium border border-border hover:bg-muted transition-colors"
   >
-    Login / signup
+    Sign In / Sign Up
   </Link>
 )}
 
@@ -180,7 +189,7 @@ export function Header() {
 
       {/* Logout */}
       <button
-        onClick={logout}
+        onClick={handleLogout}
         className="hidden md:inline px-3 py-2 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors"
       >
         Logout

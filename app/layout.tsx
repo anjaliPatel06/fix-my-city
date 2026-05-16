@@ -1,21 +1,9 @@
 import type React from "react"
-// Added fonts for English (Inter) and Hindi (Noto Sans Devanagari)
 import type { Metadata } from "next"
-import { Inter, Noto_Sans_Devanagari } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { LayoutWrapper } from "@/components/layout-wrapper"
-import Chatbot from "@/components/chatbot/chatbot";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-})
-
-const notoSansDevanagari = Noto_Sans_Devanagari({
-  subsets: ["devanagari"],
-  variable: "--font-devanagari",
-})
+import Chatbot from "@/components/chatbot/chatbot"
 
 export const metadata: Metadata = {
   title: "Fix My City",
@@ -47,9 +35,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${notoSansDevanagari.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         <LayoutWrapper>{children}</LayoutWrapper>
-        <Chatbot/>
+        <Chatbot />
         <Analytics />
       </body>
     </html>
