@@ -1,5 +1,5 @@
 node_modules
-.next
-.next-build
-.env*
-data/*.json
+# .next
+# .next-build
+# .env*
+# data/*.json

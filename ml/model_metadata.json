@@ -1,0 +1,30 @@
+{
+  "model_type": "RandomForestClassifier",
+  "departments": [
+    "Public Works",
+    "Sanitation",
+    "Electricity",
+    "Water Supply",
+    "Sewerage",
+    "Traffic Police",
+    "Municipal Corp",
+    "Horticulture",
+    "Pollution Control",
+    "Health",
+    "Town Planning",
+    "Animal Control",
+    "Public Sanitation",
+    "Transport",
+    "Fire Department"
+  ],
+  "num_classes": 15,
+  "confidence_threshold": 0.75,
+  "test_accuracy": 0.9467,
+  "feature_dims": {
+    "image": 54,
+    "text": 678,
+    "total": 732
+  },
+  "how_to_load_joblib": "import joblib; bundle = joblib.load('fix_my_city_model.joblib')",
+  "how_to_load_pickle": "import pickle; bundle = pickle.load(open('fix_my_city_model.pkl','rb'))"
+}
