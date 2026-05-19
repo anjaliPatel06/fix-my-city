@@ -15,7 +15,8 @@ Format:
   "category": "e.g., Pothole, Garbage, Stray Animals, Broken Streetlight, etc. If unknown or not a civic issue, write 'Unknown'",
   "description": "A brief 2-3 sentence description of the problem seen in the image.",
   "urgency": "High", // High, Medium, or Low based on danger or impact
-  "address": "If any landmarks, street signs, or shop names are visible, extract them. Otherwise write 'Extracting...'",
+  "address": "Exact area, landmark, street sign, or shop name only. Never put the issue description here. Otherwise write 'Extracting...'",
+  "exactLocation": "Same exact area/landmark value as address when known. Otherwise write 'Extracting...'",
   "city": "If discernible from signs, else 'Extracting...'",
   "pincode": "If discernible, else 'Extracting...'"
 }
@@ -155,6 +156,7 @@ Use the complaint text, existing fields, and image together to extract the best 
       success: true,
       data: {
         ...mergedData,
+        exactLocation: mergedData.address,
         departmentPrediction,
       },
     });

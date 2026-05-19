@@ -24,16 +24,19 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 const UPVOTED_STORAGE_KEY = "fmc_upvoted_issues";
+const COMMUNITY_ACTOR_STORAGE_KEY = "fmc_community_actor_id";
 function CommunityPage() {
     _s();
     const { language } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$theme$2d$provider$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useTheme"])();
-    const { profile } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$auth$2d$context$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"])();
+    const { profile, user } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$auth$2d$context$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"])();
     const [activeFilter, setActiveFilter] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])("trending");
     const [searchTerm, setSearchTerm] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])("");
     const [issues, setIssues] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
     const [isLoading, setIsLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(true);
     const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [upvotedIssues, setUpvotedIssues] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
+    const [actorId, setActorId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])("");
+    const [pendingUpvoteTicketId, setPendingUpvoteTicketId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const filters = [
         {
             id: "near",
@@ -42,7 +45,7 @@ function CommunityPage() {
                 className: "w-4 h-4"
             }, void 0, false, {
                 fileName: "[project]/components/community/community-page.tsx",
-                lineNumber: 26,
+                lineNumber: 29,
                 columnNumber: 43
             }, this)
         },
@@ -75,6 +78,52 @@ function CommunityPage() {
             }
         }
     }["CommunityPage.useEffect"], []);
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "CommunityPage.useEffect": ()=>{
+            if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+            ;
+            if (user?.email) {
+                setActorId(user.email);
+                return;
+            }
+            const existingActorId = window.localStorage.getItem(COMMUNITY_ACTOR_STORAGE_KEY);
+            if (existingActorId) {
+                setActorId(existingActorId);
+                return;
+            }
+            const nextActorId = typeof crypto !== "undefined" && "randomUUID" in crypto ? `anon:${crypto.randomUUID()}` : `anon:${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            window.localStorage.setItem(COMMUNITY_ACTOR_STORAGE_KEY, nextActorId);
+            setActorId(nextActorId);
+        }
+    }["CommunityPage.useEffect"], [
+        user?.email
+    ]);
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "CommunityPage.useEffect": ()=>{
+            if (!actorId) return;
+            const serverLikedTicketIds = issues.filter({
+                "CommunityPage.useEffect.serverLikedTicketIds": (issue)=>Array.isArray(issue.likedBy) && issue.likedBy.includes(actorId.toLowerCase())
+            }["CommunityPage.useEffect.serverLikedTicketIds"]).map({
+                "CommunityPage.useEffect.serverLikedTicketIds": (issue)=>issue.ticketId
+            }["CommunityPage.useEffect.serverLikedTicketIds"]);
+            if (serverLikedTicketIds.length === 0) return;
+            setUpvotedIssues({
+                "CommunityPage.useEffect": (current)=>{
+                    const next = Array.from(new Set([
+                        ...current,
+                        ...serverLikedTicketIds
+                    ]));
+                    if ("TURBOPACK compile-time truthy", 1) {
+                        window.localStorage.setItem(UPVOTED_STORAGE_KEY, JSON.stringify(next));
+                    }
+                    return next;
+                }
+            }["CommunityPage.useEffect"]);
+        }
+    }["CommunityPage.useEffect"], [
+        actorId,
+        issues
+    ]);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "CommunityPage.useEffect": ()=>{
             let active = true;
@@ -154,34 +203,57 @@ function CommunityPage() {
         return b.createdAt.localeCompare(a.createdAt);
     });
     const handleUpvote = async (ticketId)=>{
-        if (upvotedIssues.includes(ticketId)) {
+        if (!actorId || pendingUpvoteTicketId) {
             return;
         }
+        const wasLiked = upvotedIssues.includes(ticketId);
+        const nextUpvotedIssues = wasLiked ? upvotedIssues.filter((id)=>id !== ticketId) : [
+            ...upvotedIssues,
+            ticketId
+        ];
         try {
             setError(null);
+            setPendingUpvoteTicketId(ticketId);
+            setUpvotedIssues(nextUpvotedIssues);
+            window.localStorage.setItem(UPVOTED_STORAGE_KEY, JSON.stringify(nextUpvotedIssues));
+            setIssues((currentIssues)=>currentIssues.map((issue)=>issue.ticketId === ticketId ? {
+                        ...issue,
+                        upvotes: Math.max(0, issue.upvotes + (wasLiked ? -1 : 1))
+                    } : issue));
             const response = await fetch(`/api/reports/${encodeURIComponent(ticketId)}`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    action: "upvote"
+                    action: "toggle-upvote",
+                    actorId,
+                    userEmail: user?.email
                 })
             });
             const data = await response.json();
             if (!response.ok || data?.success === false) {
-                throw new Error(data?.error || "Failed to upvote issue.");
+                throw new Error(data?.error || "Failed to update like.");
             }
             const updatedIssue = data.report;
+            const liked = Boolean(data.liked);
             setIssues((currentIssues)=>currentIssues.map((issue)=>issue.ticketId === updatedIssue.ticketId ? updatedIssue : issue));
-            const nextUpvotedIssues = [
+            const confirmedUpvotedIssues = liked ? Array.from(new Set([
                 ...upvotedIssues,
                 ticketId
-            ];
-            setUpvotedIssues(nextUpvotedIssues);
-            window.localStorage.setItem(UPVOTED_STORAGE_KEY, JSON.stringify(nextUpvotedIssues));
+            ])) : upvotedIssues.filter((id)=>id !== ticketId);
+            setUpvotedIssues(confirmedUpvotedIssues);
+            window.localStorage.setItem(UPVOTED_STORAGE_KEY, JSON.stringify(confirmedUpvotedIssues));
+            console.info("[community] like toggle saved", {
+                ticketId,
+                liked
+            });
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to upvote issue.");
+            setUpvotedIssues(upvotedIssues);
+            window.localStorage.setItem(UPVOTED_STORAGE_KEY, JSON.stringify(upvotedIssues));
+            setError(err instanceof Error ? err.message : "Failed to update like.");
+        } finally{
+            setPendingUpvoteTicketId(null);
         }
     };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -197,7 +269,7 @@ function CommunityPage() {
                             children: "Community Issues"
                         }, void 0, false, {
                             fileName: "[project]/components/community/community-page.tsx",
-                            lineNumber: 165,
+                            lineNumber: 241,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -205,13 +277,13 @@ function CommunityPage() {
                             children: "See complaints submitted by citizens and track what is happening around your area."
                         }, void 0, false, {
                             fileName: "[project]/components/community/community-page.tsx",
-                            lineNumber: 166,
+                            lineNumber: 242,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/community/community-page.tsx",
-                    lineNumber: 164,
+                    lineNumber: 240,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -221,7 +293,7 @@ function CommunityPage() {
                             className: "absolute left-4 top-4 w-5 h-5 text-muted-foreground"
                         }, void 0, false, {
                             fileName: "[project]/components/community/community-page.tsx",
-                            lineNumber: 172,
+                            lineNumber: 248,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -232,13 +304,13 @@ function CommunityPage() {
                             className: "w-full pl-12 pr-4 py-3 rounded-lg bg-card border border-border focus:outline-none focus:ring-2 focus:ring-primary"
                         }, void 0, false, {
                             fileName: "[project]/components/community/community-page.tsx",
-                            lineNumber: 173,
+                            lineNumber: 249,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/community/community-page.tsx",
-                    lineNumber: 171,
+                    lineNumber: 247,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -253,13 +325,13 @@ function CommunityPage() {
                             ]
                         }, filter.id, true, {
                             fileName: "[project]/components/community/community-page.tsx",
-                            lineNumber: 185,
+                            lineNumber: 261,
                             columnNumber: 15
                         }, this);
                     })
                 }, void 0, false, {
                     fileName: "[project]/components/community/community-page.tsx",
-                    lineNumber: 182,
+                    lineNumber: 258,
                     columnNumber: 9
                 }, this),
                 error && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -267,7 +339,7 @@ function CommunityPage() {
                     children: error
                 }, void 0, false, {
                     fileName: "[project]/components/community/community-page.tsx",
-                    lineNumber: 202,
+                    lineNumber: 278,
                     columnNumber: 11
                 }, this),
                 isLoading ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -275,7 +347,7 @@ function CommunityPage() {
                     children: "Loading community complaints..."
                 }, void 0, false, {
                     fileName: "[project]/components/community/community-page.tsx",
-                    lineNumber: 208,
+                    lineNumber: 284,
                     columnNumber: 11
                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6",
@@ -292,7 +364,7 @@ function CommunityPage() {
                                             className: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                         }, void 0, false, {
                                             fileName: "[project]/components/community/community-page.tsx",
-                                            lineNumber: 218,
+                                            lineNumber: 294,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -300,13 +372,13 @@ function CommunityPage() {
                                             children: issue.status
                                         }, void 0, false, {
                                             fileName: "[project]/components/community/community-page.tsx",
-                                            lineNumber: 223,
+                                            lineNumber: 299,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/community/community-page.tsx",
-                                    lineNumber: 217,
+                                    lineNumber: 293,
                                     columnNumber: 17
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -320,7 +392,7 @@ function CommunityPage() {
                                                     children: issue.title
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/community/community-page.tsx",
-                                                    lineNumber: 234,
+                                                    lineNumber: 310,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -331,7 +403,7 @@ function CommunityPage() {
                                                             children: issue.category
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/community/community-page.tsx",
-                                                            lineNumber: 236,
+                                                            lineNumber: 312,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -341,26 +413,26 @@ function CommunityPage() {
                                                                     className: "w-3 h-3"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/community/community-page.tsx",
-                                                                    lineNumber: 240,
+                                                                    lineNumber: 316,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 issue.location
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/community/community-page.tsx",
-                                                            lineNumber: 239,
+                                                            lineNumber: 315,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/community/community-page.tsx",
-                                                    lineNumber: 235,
+                                                    lineNumber: 311,
                                                     columnNumber: 21
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/community/community-page.tsx",
-                                            lineNumber: 233,
+                                            lineNumber: 309,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -372,27 +444,27 @@ function CommunityPage() {
                                                         event.preventDefault();
                                                         void handleUpvote(issue.ticketId);
                                                     },
-                                                    disabled: upvotedIssues.includes(issue.ticketId),
+                                                    disabled: pendingUpvoteTicketId === issue.ticketId,
                                                     className: `flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${upvotedIssues.includes(issue.ticketId) ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`,
                                                     children: [
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$thumbs$2d$up$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ThumbsUp$3e$__["ThumbsUp"], {
                                                             className: "w-4 h-4"
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/community/community-page.tsx",
-                                                            lineNumber: 260,
+                                                            lineNumber: 336,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                             children: issue.upvotes
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/community/community-page.tsx",
-                                                            lineNumber: 261,
+                                                            lineNumber: 337,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/community/community-page.tsx",
-                                                    lineNumber: 247,
+                                                    lineNumber: 323,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -402,7 +474,7 @@ function CommunityPage() {
                                                             className: "w-4 h-4"
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/community/community-page.tsx",
-                                                            lineNumber: 265,
+                                                            lineNumber: 341,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -410,36 +482,36 @@ function CommunityPage() {
                                                             children: issue.commentsCount
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/community/community-page.tsx",
-                                                            lineNumber: 266,
+                                                            lineNumber: 342,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/community/community-page.tsx",
-                                                    lineNumber: 264,
+                                                    lineNumber: 340,
                                                     columnNumber: 21
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/community/community-page.tsx",
-                                            lineNumber: 246,
+                                            lineNumber: 322,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/community/community-page.tsx",
-                                    lineNumber: 232,
+                                    lineNumber: 308,
                                     columnNumber: 17
                                 }, this)
                             ]
                         }, issue.ticketId, true, {
                             fileName: "[project]/components/community/community-page.tsx",
-                            lineNumber: 212,
+                            lineNumber: 288,
                             columnNumber: 15
                         }, this))
                 }, void 0, false, {
                     fileName: "[project]/components/community/community-page.tsx",
-                    lineNumber: 210,
+                    lineNumber: 286,
                     columnNumber: 11
                 }, this),
                 !isLoading && filteredIssues.length === 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -450,7 +522,7 @@ function CommunityPage() {
                             children: issues.length === 0 ? "No complaints have been submitted yet. New reports will appear here automatically." : "No issues found matching your search"
                         }, void 0, false, {
                             fileName: "[project]/components/community/community-page.tsx",
-                            lineNumber: 277,
+                            lineNumber: 353,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -459,28 +531,28 @@ function CommunityPage() {
                             children: "Clear Filters"
                         }, void 0, false, {
                             fileName: "[project]/components/community/community-page.tsx",
-                            lineNumber: 282,
+                            lineNumber: 358,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/community/community-page.tsx",
-                    lineNumber: 276,
+                    lineNumber: 352,
                     columnNumber: 11
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/components/community/community-page.tsx",
-            lineNumber: 163,
+            lineNumber: 239,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/components/community/community-page.tsx",
-        lineNumber: 162,
+        lineNumber: 238,
         columnNumber: 5
     }, this);
 }
-_s(CommunityPage, "FPczgPldbpyas+1KwGSz1wag6/0=", false, function() {
+_s(CommunityPage, "Uy6gdqcjhsWSbD+Rql9rNXpJT2E=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$theme$2d$provider$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useTheme"],
         __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$auth$2d$context$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"]

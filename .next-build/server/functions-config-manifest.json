@@ -2,9 +2,9 @@
   "version": 1,
   "functions": {
     "/api/classify": {},
-    "/api/reports": {},
-    "/api/whatsapp/webhook": {},
     "/api/analyze-photo": {},
+    "/api/whatsapp/webhook": {},
+    "/api/reports": {},
     "/_middleware": {
       "runtime": "nodejs",
       "matchers": [

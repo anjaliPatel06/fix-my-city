@@ -1,3 +1,5 @@
+import { REPORT_CATEGORY_MATCHERS } from "@/lib/server/report-agent";
+
 export type ExtractedReportFields = {
   category: string;
   description: string;
@@ -52,28 +54,7 @@ function pickKnownString(...values: unknown[]) {
 export function detectCategory(message: string) {
   const text = message.toLowerCase();
 
-  const categoryMatchers: Array<{ keywords: string[]; category: string }> = [
-    { keywords: ["garbage", "kachra", "waste", "trash"], category: "Garbage" },
-    { keywords: ["pothole", "gadda", "road damage"], category: "Pothole" },
-    {
-      keywords: ["streetlight", "street light", "light pole", "light kharab"],
-      category: "Broken Streetlight",
-    },
-    {
-      keywords: ["water leakage", "water leak", "paani leak", "pipeline", "sewer", "drain"],
-      category: "Water Leakage",
-    },
-    {
-      keywords: ["traffic signal", "signal", "red light"],
-      category: "Traffic Signal Issue",
-    },
-    {
-      keywords: ["dog", "stray animal", "animal", "cow", "monkey"],
-      category: "Stray Animals",
-    },
-  ];
-
-  const matchedCategory = categoryMatchers.find(({ keywords }) =>
+  const matchedCategory = REPORT_CATEGORY_MATCHERS.find(({ keywords }) =>
     keywords.some((keyword) => text.includes(keyword)),
   );
 
@@ -136,8 +117,31 @@ export function detectCity(message: string) {
   return undefined;
 }
 
+function cleanLocationCandidate(value?: string) {
+  if (!value) return undefined;
+
+  const cleaned = titleCase(
+    value
+      .replace(
+        /\b(?:causing|create|creating|due|because|with|especially|during|increase|risk|accidents?|traffic|congestion|hai|is|are|on|for)\b.*$/i,
+        "",
+      )
+      .replace(/[.,;].*$/, "")
+      .replace(/\s+/g, " ")
+      .trim(),
+  );
+
+  return cleaned.length >= 3 ? cleaned : undefined;
+}
+
 export function detectAddress(message: string) {
   const text = message.trim();
+  const landmarkMatch = text.match(
+    /\b(?:near|opposite|behind|landmark|beside|next to)\s+(.{3,80})/i,
+  );
+  const landmark = cleanLocationCandidate(landmarkMatch?.[1]);
+  if (landmark) return landmark;
+
   const addressHints = [
     "road",
     "street",
@@ -154,7 +158,10 @@ export function detectAddress(message: string) {
     "beside",
   ];
 
-  if (addressHints.some((hint) => text.toLowerCase().includes(hint))) {
+  if (
+    addressHints.some((hint) => text.toLowerCase().includes(hint)) &&
+    text.split(/\s+/).length <= 8
+  ) {
     return text;
   }
 

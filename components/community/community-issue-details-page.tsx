@@ -1,10 +1,14 @@
 "use client"
 
 import Link from "next/link"
+import type { FormEvent } from "react"
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
-import { ArrowLeft, Loader2, MapPin, Phone, ThumbsUp } from "lucide-react"
-import type { ComplaintRecord } from "@/lib/types"
+import { ArrowLeft, Loader2, MapPin, MessageCircle, Phone, Send, ThumbsUp } from "lucide-react"
+import { useAuth } from "@/components/auth-context"
+import { getCommunityActorId } from "@/lib/community-engagement"
+import { getComplaintLocationLabel } from "@/lib/report-display"
+import type { ComplaintComment, ComplaintRecord } from "@/lib/types"
 import { ComplaintDetails } from "@/components/track/complaint-details"
 import { StatusTimeline } from "@/components/track/status-timeline"
 
@@ -17,10 +21,21 @@ const statusColors: Record<string, string> = {
 
 export function CommunityIssueDetailsPage() {
   const params = useParams<{ ticketId: string }>()
+  const { user } = useAuth()
   const ticketId = decodeURIComponent(params.ticketId)
   const [complaint, setComplaint] = useState<ComplaintRecord | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actorId, setActorId] = useState("")
+  const [commentText, setCommentText] = useState("")
+  const [commentError, setCommentError] = useState<string | null>(null)
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    setActorId(getCommunityActorId(user?.email))
+  }, [user?.email])
 
   useEffect(() => {
     let active = true
@@ -70,6 +85,79 @@ export function CommunityIssueDetailsPage() {
     if (!complaint) return ""
     return new Date(complaint.createdAt).toLocaleString("en-IN")
   }, [complaint])
+
+  const comments = complaint?.comments ?? []
+
+  const handleCommentSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!complaint || isSubmittingComment) return
+
+    const body = commentText.trim()
+    if (!body) {
+      setCommentError("Comment cannot be empty.")
+      return
+    }
+
+    if (body.length > 500) {
+      setCommentError("Comment must be 500 characters or less.")
+      return
+    }
+
+    const nextActorId = actorId || getCommunityActorId(user?.email)
+    if (!nextActorId) {
+      setCommentError("Please sign in or refresh before commenting.")
+      return
+    }
+
+    const optimisticComment: ComplaintComment = {
+      id: `pending-${Date.now()}`,
+      authorId: nextActorId,
+      authorName: user?.name || "Community Member",
+      body,
+      createdAt: new Date().toISOString(),
+    }
+    const previousComplaint = complaint
+
+    try {
+      setCommentError(null)
+      setIsSubmittingComment(true)
+      setCommentText("")
+      setComplaint({
+        ...complaint,
+        comments: [...comments, optimisticComment],
+        commentsCount: comments.length + 1,
+      })
+
+      const response = await fetch(`/api/reports/${encodeURIComponent(complaint.ticketId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add-comment",
+          authorId: nextActorId,
+          authorName: user?.name || "Community Member",
+          comment: body,
+        }),
+      })
+      const data = await response.json()
+
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.error || "Failed to submit comment.")
+      }
+
+      setComplaint(data.report as ComplaintRecord)
+      console.info("[community] comment saved", {
+        ticketId: complaint.ticketId,
+        commentId: data.comment?.id,
+      })
+    } catch (err) {
+      setComplaint(previousComplaint)
+      setCommentText(body)
+      setCommentError(err instanceof Error ? err.message : "Failed to submit comment.")
+    } finally {
+      setIsSubmittingComment(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -132,7 +220,7 @@ export function CommunityIssueDetailsPage() {
                 <h1 className="text-3xl font-bold tracking-tight">{complaint.title}</h1>
                 <p className="mt-2 flex items-center gap-2 text-muted-foreground">
                   <MapPin className="h-4 w-4" />
-                  {complaint.location}
+                  {getComplaintLocationLabel(complaint)}
                 </p>
               </div>
             </div>
@@ -161,6 +249,61 @@ export function CommunityIssueDetailsPage() {
           <div className="lg:col-span-2 space-y-8">
             <ComplaintDetails complaint={complaint} />
             <StatusTimeline timeline={complaint.timeline} />
+
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                Comments
+              </h2>
+
+              <form onSubmit={handleCommentSubmit} className="mb-6 space-y-3">
+                <textarea
+                  value={commentText}
+                  onChange={(event) => {
+                    setCommentText(event.target.value)
+                    if (commentError) setCommentError(null)
+                  }}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Add a community update or helpful detail..."
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                {commentError && <p className="text-sm text-red-600">{commentError}</p>}
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">{commentText.trim().length}/500</p>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingComment}
+                    className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSubmittingComment ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    Post Comment
+                  </button>
+                </div>
+              </form>
+
+              {comments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No comments yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="rounded-2xl border border-border bg-background/60 p-4">
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold">{comment.authorName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(comment.createdAt).toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                      <p className="text-sm leading-relaxed text-foreground">{comment.body}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="space-y-6">

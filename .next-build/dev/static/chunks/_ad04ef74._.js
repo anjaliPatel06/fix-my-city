@@ -53,6 +53,7 @@ function PhotoUploadPage() {
                         existingFields: {
                             category: reportData.category || "",
                             address: reportData.address || "",
+                            exactLocation: reportData.exactLocation || "",
                             city: reportData.city || "",
                             pincode: reportData.pincode || "",
                             urgency: reportData.urgency || ""
@@ -67,6 +68,7 @@ function PhotoUploadPage() {
                         category: d.category && d.category !== "Unknown" ? d.category : reportData.category,
                         description: d.description && d.description !== "Extracting..." ? d.description : reportData.description,
                         address: d.address && d.address !== "Extracting..." ? d.address : reportData.address,
+                        exactLocation: d.exactLocation && d.exactLocation !== "Extracting..." ? d.exactLocation : d.address && d.address !== "Extracting..." ? d.address : reportData.exactLocation,
                         city: d.city && d.city !== "Extracting..." ? d.city : reportData.city,
                         pincode: d.pincode && d.pincode !== "Extracting..." ? d.pincode : reportData.pincode,
                         urgency: d.urgency && d.urgency !== "Extracting..." ? d.urgency : reportData.urgency,
@@ -108,7 +110,7 @@ function PhotoUploadPage() {
                     children: "Add a Photo"
                 }, void 0, false, {
                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                    lineNumber: 93,
+                    lineNumber: 100,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -116,7 +118,7 @@ function PhotoUploadPage() {
                     children: "Upload a photo to help our AI verify and prioritize your report"
                 }, void 0, false, {
                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                    lineNumber: 94,
+                    lineNumber: 101,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -131,12 +133,12 @@ function PhotoUploadPage() {
                                         className: "w-10 h-10 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/components/report/photo-upload-page.tsx",
-                                        lineNumber: 103,
+                                        lineNumber: 110,
                                         columnNumber: 17
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                                    lineNumber: 102,
+                                    lineNumber: 109,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -144,7 +146,7 @@ function PhotoUploadPage() {
                                     children: "No photo selected"
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                                    lineNumber: 105,
+                                    lineNumber: 112,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -152,13 +154,13 @@ function PhotoUploadPage() {
                                     children: "Click below to capture or upload a photo from your device"
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                                    lineNumber: 106,
+                                    lineNumber: 113,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/report/photo-upload-page.tsx",
-                            lineNumber: 101,
+                            lineNumber: 108,
                             columnNumber: 13
                         }, this),
                         uploadState === "uploading" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -170,12 +172,12 @@ function PhotoUploadPage() {
                                         className: "w-10 h-10 text-primary animate-spin"
                                     }, void 0, false, {
                                         fileName: "[project]/components/report/photo-upload-page.tsx",
-                                        lineNumber: 115,
+                                        lineNumber: 122,
                                         columnNumber: 17
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                                    lineNumber: 114,
+                                    lineNumber: 121,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -184,7 +186,7 @@ function PhotoUploadPage() {
                                         "AI is analyzing your photo...",
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
                                             fileName: "[project]/components/report/photo-upload-page.tsx",
-                                            lineNumber: 118,
+                                            lineNumber: 125,
                                             columnNumber: 46
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -192,19 +194,19 @@ function PhotoUploadPage() {
                                             children: "Extracting location, issue type, and urgency..."
                                         }, void 0, false, {
                                             fileName: "[project]/components/report/photo-upload-page.tsx",
-                                            lineNumber: 119,
+                                            lineNumber: 126,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                                    lineNumber: 117,
+                                    lineNumber: 124,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/report/photo-upload-page.tsx",
-                            lineNumber: 113,
+                            lineNumber: 120,
                             columnNumber: 13
                         }, this),
                         uploadState === "success" && reportData.photoUrl && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -216,7 +218,7 @@ function PhotoUploadPage() {
                                     className: "w-full h-64 object-cover rounded-lg"
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                                    lineNumber: 126,
+                                    lineNumber: 133,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -225,24 +227,24 @@ function PhotoUploadPage() {
                                         className: "w-5 h-5"
                                     }, void 0, false, {
                                         fileName: "[project]/components/report/photo-upload-page.tsx",
-                                        lineNumber: 132,
+                                        lineNumber: 139,
                                         columnNumber: 17
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                                    lineNumber: 131,
+                                    lineNumber: 138,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/report/photo-upload-page.tsx",
-                            lineNumber: 125,
+                            lineNumber: 132,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                    lineNumber: 99,
+                    lineNumber: 106,
                     columnNumber: 9
                 }, this),
                 uploadState === "idle" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -256,14 +258,14 @@ function PhotoUploadPage() {
                                     className: "w-5 h-5"
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                                    lineNumber: 145,
+                                    lineNumber: 152,
                                     columnNumber: 15
                                 }, this),
                                 "Take Photo"
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/report/photo-upload-page.tsx",
-                            lineNumber: 141,
+                            lineNumber: 148,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -274,20 +276,20 @@ function PhotoUploadPage() {
                                     className: "w-5 h-5"
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                                    lineNumber: 153,
+                                    lineNumber: 160,
                                     columnNumber: 15
                                 }, this),
                                 "Upload Photo"
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/report/photo-upload-page.tsx",
-                            lineNumber: 149,
+                            lineNumber: 156,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                    lineNumber: 140,
+                    lineNumber: 147,
                     columnNumber: 11
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -299,7 +301,7 @@ function PhotoUploadPage() {
                     className: "hidden"
                 }, void 0, false, {
                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                    lineNumber: 159,
+                    lineNumber: 166,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -313,14 +315,14 @@ function PhotoUploadPage() {
                                     className: "w-5 h-5"
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                                    lineNumber: 174,
+                                    lineNumber: 181,
                                     columnNumber: 13
                                 }, this),
                                 "Back"
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/report/photo-upload-page.tsx",
-                            lineNumber: 170,
+                            lineNumber: 177,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -333,19 +335,19 @@ function PhotoUploadPage() {
                                     className: "w-5 h-5"
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                                    lineNumber: 184,
+                                    lineNumber: 191,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/report/photo-upload-page.tsx",
-                            lineNumber: 178,
+                            lineNumber: 185,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                    lineNumber: 169,
+                    lineNumber: 176,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -358,30 +360,30 @@ function PhotoUploadPage() {
                                 children: "Tip:"
                             }, void 0, false, {
                                 fileName: "[project]/components/report/photo-upload-page.tsx",
-                                lineNumber: 191,
+                                lineNumber: 198,
                                 columnNumber: 16
                             }, this),
                             " A clear photo helps our AI verify the issue accurately. Make sure lighting is good and the issue is clearly visible."
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/report/photo-upload-page.tsx",
-                        lineNumber: 190,
+                        lineNumber: 197,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/components/report/photo-upload-page.tsx",
-                    lineNumber: 189,
+                    lineNumber: 196,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/components/report/photo-upload-page.tsx",
-            lineNumber: 92,
+            lineNumber: 99,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/components/report/photo-upload-page.tsx",
-        lineNumber: 91,
+        lineNumber: 98,
         columnNumber: 5
     }, this);
 }

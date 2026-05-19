@@ -1,5 +1,6 @@
 "use client"
 import { MapPin, Calendar, AlertCircle, ImageIcon } from "lucide-react"
+import { getComplaintLocationLabel } from "@/lib/report-display"
 
 export function ComplaintDetails({ complaint }: { complaint: any }) {
   return (
@@ -29,7 +30,7 @@ export function ComplaintDetails({ complaint }: { complaint: any }) {
             <MapPin className="w-4 h-4" />
             Location
           </p>
-          <p className="font-semibold">{complaint.location}</p>
+          <p className="font-semibold">{getComplaintLocationLabel(complaint)}</p>
         </div>
 
         <div className="border-t border-border pt-4">

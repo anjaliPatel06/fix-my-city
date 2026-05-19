@@ -1,4 +1,5 @@
 import type {
+  ComplaintComment,
   ComplaintRecord,
   ComplaintStatus,
   ComplaintTimelineItem,
@@ -23,20 +24,41 @@ export type ReportInput = {
   category: string;
   description: string;
   address: string;
+  exactLocation?: string;
+  landmark?: string;
   city: string;
   pincode: string;
   urgency: "Low" | "Medium" | "High";
   photoUrl?: string;
+  imageUrl?: string;
+  latitude?: number;
+  longitude?: number;
   departmentPrediction?: DepartmentPrediction;
+};
+
+export type ComplaintCommentInput = {
+  ticketId: string;
+  authorId: string;
+  authorName: string;
+  body: string;
 };
 
 export function inferDepartment(category: string, description = "") {
   const normalized = `${category} ${description}`.toLowerCase();
 
   if (
+    normalized.includes("general issue") ||
+    normalized.includes("general complaint") ||
+    normalized.includes("other issue")
+  ) {
+    return "General Complaints Cell";
+  }
+
+  if (
     normalized.includes("garbage") ||
     normalized.includes("waste") ||
-    normalized.includes("trash")
+    normalized.includes("trash") ||
+    normalized.includes("dump")
   ) {
     return "Sanitation";
   }
@@ -44,7 +66,8 @@ export function inferDepartment(category: string, description = "") {
   if (
     normalized.includes("pothole") ||
     normalized.includes("road") ||
-    normalized.includes("footpath")
+    normalized.includes("footpath") ||
+    normalized.includes("sidewalk")
   ) {
     return "Public Works";
   }
@@ -52,6 +75,7 @@ export function inferDepartment(category: string, description = "") {
   if (
     normalized.includes("streetlight") ||
     normalized.includes("street light") ||
+    normalized.includes("light pole") ||
     normalized.includes("light")
   ) {
     return "Electricity";
@@ -61,7 +85,8 @@ export function inferDepartment(category: string, description = "") {
     normalized.includes("sewer") ||
     normalized.includes("sewage") ||
     normalized.includes("manhole") ||
-    normalized.includes("drainage")
+    normalized.includes("drainage") ||
+    normalized.includes("drain overflow")
   ) {
     return "Sewerage";
   }
@@ -78,7 +103,8 @@ export function inferDepartment(category: string, description = "") {
   if (
     normalized.includes("signal") ||
     normalized.includes("traffic") ||
-    normalized.includes("parking")
+    normalized.includes("parking") ||
+    normalized.includes("jam")
   ) {
     return "Traffic Police";
   }
@@ -95,7 +121,8 @@ export function inferDepartment(category: string, description = "") {
     normalized.includes("tree") ||
     normalized.includes("park") ||
     normalized.includes("branch") ||
-    normalized.includes("garden")
+    normalized.includes("garden") ||
+    normalized.includes("playground")
   ) {
     return "Horticulture";
   }
@@ -128,7 +155,8 @@ export function inferDepartment(category: string, description = "") {
   if (
     normalized.includes("animal") ||
     normalized.includes("dog") ||
-    normalized.includes("cow")
+    normalized.includes("cow") ||
+    normalized.includes("monkey")
   ) {
     return "Animal Control";
   }
@@ -152,16 +180,24 @@ export function inferDepartment(category: string, description = "") {
   if (
     normalized.includes("fire") ||
     normalized.includes("gas leak") ||
-    normalized.includes("flammable")
+    normalized.includes("flammable") ||
+    normalized.includes("short circuit")
   ) {
     return "Fire Department";
   }
 
-  return "Municipal Corp";
+  return "General Complaints Cell";
 }
 
-export function buildLocation(address: string, city: string, pincode: string) {
-  return [address, city, pincode].filter((value) => value && value.trim() !== "").join(", ");
+export function buildLocation(
+  address: string,
+  city: string,
+  pincode: string,
+  landmark?: string,
+) {
+  return [address, landmark, city, pincode]
+    .filter((value) => value && value.trim() !== "")
+    .join(", ");
 }
 
 export function buildComplaintTimeline(createdAt: string): ComplaintTimelineItem[] {
@@ -202,6 +238,53 @@ export function pickComplaintImage(category: string, fallbackPhotoUrl?: string) 
   return "/pothole.png";
 }
 
+function normalizeOptionalText(value?: string) {
+  const normalized = value?.trim();
+  if (!normalized) return undefined;
+
+  const lower = normalized.toLowerCase();
+  if (["extracting...", "unknown", "n/a", "na"].includes(lower)) {
+    return undefined;
+  }
+
+  return normalized;
+}
+
+function normalizeActorId(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function ensureEngagementFields(complaint: ComplaintRecord) {
+  if (!Array.isArray(complaint.likedBy)) {
+    complaint.likedBy = [];
+  }
+
+  if (!Array.isArray(complaint.comments)) {
+    complaint.comments = [];
+  }
+
+  // Older reports only stored a numeric upvote count. Preserve that count by
+  // reserving legacy actor slots before applying the new per-user toggle model.
+  const legacyUpvoteCount = Math.max(0, complaint.upvotes || 0);
+  while (complaint.likedBy.length < legacyUpvoteCount) {
+    complaint.likedBy.push(`legacy:${complaint.ticketId}:${complaint.likedBy.length + 1}`);
+  }
+
+  complaint.upvotes = complaint.likedBy.length;
+  complaint.commentsCount = complaint.comments.length;
+}
+
+function createCommentId(existingComments: ComplaintComment[]) {
+  const existingIds = new Set(existingComments.map((comment) => comment.id));
+  let id = `CMT-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+  while (existingIds.has(id)) {
+    id = `CMT-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  return id;
+}
+
 export function buildComplaintRecord(
   input: ReportInput,
   existingTicketIds: Set<string>,
@@ -220,6 +303,11 @@ export function buildComplaintRecord(
   const officer = getOfficerByDepartment(assignedDepartment);
   const ticketId = createUniqueTicketId(existingTicketIds);
   const status: ComplaintStatus = "Submitted";
+  const exactLocation = normalizeOptionalText(input.exactLocation) || input.address;
+  const area = exactLocation;
+  const landmark = normalizeOptionalText(input.landmark);
+  const uploadedImage = normalizeOptionalText(input.imageUrl) || normalizeOptionalText(input.photoUrl);
+  const photoUrl = pickComplaintImage(input.category, uploadedImage);
 
   return {
     ticketId,
@@ -228,14 +316,21 @@ export function buildComplaintRecord(
     title: `${input.category} reported in ${input.city}`,
     category: input.category,
     description: input.description,
-    address: input.address,
+    address: area,
+    exactLocation,
+    landmark,
     city: input.city,
     pincode: input.pincode,
-    location: buildLocation(input.address, input.city, input.pincode),
+    location: buildLocation(exactLocation, input.city, input.pincode, landmark),
+    latitude: input.latitude,
+    longitude: input.longitude,
     urgency: input.urgency,
-    photoUrl: pickComplaintImage(input.category, input.photoUrl),
+    photoUrl,
+    imageUrl: uploadedImage || photoUrl,
     status,
     upvotes: 0,
+    likedBy: [],
+    comments: [],
     commentsCount: 0,
     assignedDepartment,
     departmentPrediction,
@@ -250,7 +345,7 @@ async function resolveDepartmentPrediction(input: ReportInput) {
   try {
     return await predictDepartmentFromInputs({
       description: input.description,
-      imageBase64: input.photoUrl,
+      imageBase64: input.photoUrl?.startsWith("data:") ? input.photoUrl : undefined,
     });
   } catch (error) {
     console.error("department classifier error:", error);
@@ -288,18 +383,104 @@ export async function createComplaintForUser(input: ReportInput) {
 }
 
 export async function upvoteComplaint(ticketId: string) {
+  const { complaint } = await toggleComplaintUpvote({
+    ticketId,
+    actorId: "legacy-community-user",
+  });
+
+  return complaint;
+}
+
+export async function toggleComplaintUpvote(input: {
+  ticketId: string;
+  actorId: string;
+}) {
+  const actorId = normalizeActorId(input.actorId);
+
+  if (!actorId) {
+    throw new Error("A user identifier is required to like an issue.");
+  }
+
   return updateDatabase((database) => {
-    const complaint = database.complaints.find((entry) => entry.ticketId === ticketId);
+    const complaint = database.complaints.find((entry) => entry.ticketId === input.ticketId);
 
     if (!complaint) {
       throw new Error("Complaint not found.");
     }
 
-    complaint.upvotes += 1;
+    ensureEngagementFields(complaint);
+
+    const existingIndex = complaint.likedBy!.indexOf(actorId);
+    const liked = existingIndex === -1;
+
+    if (liked) {
+      complaint.likedBy!.push(actorId);
+    } else {
+      complaint.likedBy!.splice(existingIndex, 1);
+    }
+
+    complaint.upvotes = complaint.likedBy!.length;
     complaint.urgency = deriveUrgencyFromUpvotes(complaint.urgency, complaint.upvotes);
     complaint.updatedAt = new Date().toISOString();
 
-    return complaint;
+    console.info("[community] like toggle persisted", {
+      ticketId: complaint.ticketId,
+      actorId,
+      liked,
+      upvotes: complaint.upvotes,
+    });
+
+    return { complaint, liked };
+  });
+}
+
+export async function addComplaintComment(input: ComplaintCommentInput) {
+  const authorId = normalizeActorId(input.authorId);
+  const authorName = input.authorName.trim();
+  const body = input.body.trim();
+
+  if (!authorId) {
+    throw new Error("A user identifier is required to comment.");
+  }
+
+  if (!body) {
+    throw new Error("Comment cannot be empty.");
+  }
+
+  if (body.length > 500) {
+    throw new Error("Comment must be 500 characters or less.");
+  }
+
+  return updateDatabase((database) => {
+    const complaint = database.complaints.find((entry) => entry.ticketId === input.ticketId);
+
+    if (!complaint) {
+      throw new Error("Complaint not found.");
+    }
+
+    ensureEngagementFields(complaint);
+
+    const now = new Date().toISOString();
+    const comment: ComplaintComment = {
+      id: createCommentId(complaint.comments!),
+      authorId,
+      authorName: authorName || "Community Member",
+      body,
+      createdAt: now,
+    };
+
+    complaint.comments!.push(comment);
+    complaint.commentsCount = complaint.comments!.length;
+    complaint.updatedAt = now;
+
+    console.info("[community] comment persisted", {
+      ticketId: complaint.ticketId,
+      authorId,
+      commentId: comment.id,
+      commentsCount: complaint.commentsCount,
+    });
+
+    return { complaint, comment };
   });
 }
 

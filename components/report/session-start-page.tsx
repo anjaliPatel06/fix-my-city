@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-context"
 import { useTheme } from "@/lib/theme-provider"
 import { translations } from "@/lib/i18n"
+import { startWhatsAppReportSession } from "@/lib/whatsapp-client"
 import { Phone, Type, MessageCircle, ArrowRight } from "lucide-react"
 
 export function SessionStartPage() {
@@ -29,22 +30,12 @@ export function SessionStartPage() {
       setIsLaunchingWhatsApp(true)
       setWhatsappError(null)
 
-      const response = await fetch("/api/whatsapp/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userEmail: user.email,
-          userName: user.name,
-        }),
+      const session = await startWhatsAppReportSession({
+        userEmail: user.email,
+        userName: user.name,
       })
 
-      const result = await response.json()
-
-      if (!response.ok || result?.success === false || !result?.launchLink) {
-        throw new Error(result?.error || "Unable to open the WhatsApp complaint flow.")
-      }
-
-      window.location.assign(result.launchLink)
+      window.location.assign(session.launchLink)
     } catch (error) {
       setWhatsappError(
         error instanceof Error ? error.message : "Unable to open the WhatsApp complaint flow.",
@@ -81,7 +72,7 @@ export function SessionStartPage() {
   ] as const
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-background to-secondary flex items-center justify-center py-12">
+    <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-background to-secondary py-12">
       <div className="max-w-4xl mx-auto px-4 w-full">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">{t.startReporting}</h1>

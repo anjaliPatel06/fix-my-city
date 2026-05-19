@@ -13,11 +13,16 @@ export async function POST(req: NextRequest) {
     const category = String(body?.category ?? "").trim();
     const description = String(body?.description ?? "").trim();
     const address = String(body?.address ?? "").trim();
+    const exactLocation = String(body?.exactLocation ?? "").trim();
+    const landmark = String(body?.landmark ?? "").trim();
     const city = String(body?.city ?? "").trim();
     const pincode = String(body?.pincode ?? "").trim();
     const urgency =
       body?.urgency === "High" || body?.urgency === "Low" ? body.urgency : "Medium";
     const photoUrl = typeof body?.photoUrl === "string" ? body.photoUrl : undefined;
+    const imageUrl = typeof body?.imageUrl === "string" ? body.imageUrl : undefined;
+    const latitude = typeof body?.latitude === "number" ? body.latitude : undefined;
+    const longitude = typeof body?.longitude === "number" ? body.longitude : undefined;
 
     if (!userEmail || !userName || !category || !description || !address || !city || !pincode) {
       return NextResponse.json(
@@ -32,10 +37,15 @@ export async function POST(req: NextRequest) {
       category,
       description,
       address,
+      exactLocation: exactLocation || address,
+      landmark,
       city,
       pincode,
       urgency,
       photoUrl,
+      imageUrl,
+      latitude,
+      longitude,
     });
 
     return NextResponse.json({

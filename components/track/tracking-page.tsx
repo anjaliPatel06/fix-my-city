@@ -7,6 +7,7 @@ import { Search, MapPin, Phone, Upload, ThumbsUp } from "lucide-react"
 import { ComplaintDetails } from "./complaint-details"
 import { StatusTimeline } from "./status-timeline"
 import { useAuth } from "@/components/auth-context"
+import { getComplaintLocationLabel } from "@/lib/report-display"
 import type { ComplaintRecord } from "@/lib/types"
 
 export function TrackingPage() {
@@ -245,7 +246,9 @@ export function TrackingPage() {
               <div className="w-full h-48 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg flex items-center justify-center border border-border">
                 <MapPin className="w-8 h-8 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground mt-3">{complaint.location}</p>
+              <p className="text-sm text-muted-foreground mt-3">
+                {getComplaintLocationLabel(complaint)}
+              </p>
             </div>
           </div>
         </div>

@@ -35,7 +35,7 @@ export function HowItWorks() {
                 )}
 
                 <div className="bg-background rounded-xl p-8 text-center h-full flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
                     <Icon className="w-8 h-8 text-primary" />
                   </div>
 

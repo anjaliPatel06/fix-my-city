@@ -6,21 +6,23 @@ import { useEffect, useState } from "react"
 import { useTheme } from "@/lib/theme-provider"
 import { Search, MapPin, ThumbsUp, MessageCircle } from "lucide-react"
 import { useAuth } from "@/components/auth-context"
+import { getCommunityActorId, UPVOTED_STORAGE_KEY } from "@/lib/community-engagement"
+import { getComplaintArea, getComplaintLocationLabel } from "@/lib/report-display"
 import type { ComplaintRecord } from "@/lib/types"
 
 type FilterType = "near" | "trending" | "urgent" | "latest"
 
-const UPVOTED_STORAGE_KEY = "fmc_upvoted_issues"
-
 export function CommunityPage() {
   const { language } = useTheme()
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
   const [activeFilter, setActiveFilter] = useState<FilterType>("trending")
   const [searchTerm, setSearchTerm] = useState("")
   const [issues, setIssues] = useState<ComplaintRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [upvotedIssues, setUpvotedIssues] = useState<string[]>([])
+  const [actorId, setActorId] = useState("")
+  const [pendingUpvoteTicketId, setPendingUpvoteTicketId] = useState<string | null>(null)
 
   const filters: Array<{ id: FilterType; label: string; icon: ReactNode }> = [
     { id: "near", label: "Near Me", icon: <MapPin className="w-4 h-4" /> },
@@ -40,6 +42,30 @@ export function CommunityPage() {
       setUpvotedIssues([])
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    setActorId(getCommunityActorId(user?.email))
+  }, [user?.email])
+
+  useEffect(() => {
+    if (!actorId) return
+
+    const serverLikedTicketIds = issues
+      .filter((issue) => Array.isArray(issue.likedBy) && issue.likedBy.includes(actorId.toLowerCase()))
+      .map((issue) => issue.ticketId)
+
+    if (serverLikedTicketIds.length === 0) return
+
+    setUpvotedIssues((current) => {
+      const next = Array.from(new Set([...current, ...serverLikedTicketIds]))
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(UPVOTED_STORAGE_KEY, JSON.stringify(next))
+      }
+      return next
+    })
+  }, [actorId, issues])
 
   useEffect(() => {
     let active = true
@@ -91,7 +117,7 @@ export function CommunityPage() {
         issue.title,
         issue.category,
         issue.city,
-        issue.address,
+        getComplaintArea(issue),
         issue.ticketId,
       ]
         .join(" ")
@@ -125,36 +151,70 @@ export function CommunityPage() {
     })
 
   const handleUpvote = async (ticketId: string) => {
-    if (upvotedIssues.includes(ticketId)) {
+    if (!actorId || pendingUpvoteTicketId) {
       return
     }
 
+    const wasLiked = upvotedIssues.includes(ticketId)
+    const nextUpvotedIssues = wasLiked
+      ? upvotedIssues.filter((id) => id !== ticketId)
+      : [...upvotedIssues, ticketId]
+    const previousIssues = issues
+
     try {
       setError(null)
+      setPendingUpvoteTicketId(ticketId)
+      setUpvotedIssues(nextUpvotedIssues)
+      window.localStorage.setItem(UPVOTED_STORAGE_KEY, JSON.stringify(nextUpvotedIssues))
+
+      setIssues((currentIssues) =>
+        currentIssues.map((issue) =>
+          issue.ticketId === ticketId
+            ? {
+                ...issue,
+                upvotes: Math.max(0, issue.upvotes + (wasLiked ? -1 : 1)),
+              }
+            : issue,
+        ),
+      )
 
       const response = await fetch(`/api/reports/${encodeURIComponent(ticketId)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "upvote" }),
+        body: JSON.stringify({
+          action: "toggle-upvote",
+          actorId,
+          userEmail: user?.email,
+        }),
       })
       const data = await response.json()
 
       if (!response.ok || data?.success === false) {
-        throw new Error(data?.error || "Failed to upvote issue.")
+        throw new Error(data?.error || "Failed to update like.")
       }
 
       const updatedIssue = data.report as ComplaintRecord
+      const liked = Boolean(data.liked)
       setIssues((currentIssues) =>
         currentIssues.map((issue) =>
           issue.ticketId === updatedIssue.ticketId ? updatedIssue : issue,
         ),
       )
 
-      const nextUpvotedIssues = [...upvotedIssues, ticketId]
-      setUpvotedIssues(nextUpvotedIssues)
-      window.localStorage.setItem(UPVOTED_STORAGE_KEY, JSON.stringify(nextUpvotedIssues))
+      const confirmedUpvotedIssues = liked
+        ? Array.from(new Set([...upvotedIssues, ticketId]))
+        : upvotedIssues.filter((id) => id !== ticketId)
+
+      setUpvotedIssues(confirmedUpvotedIssues)
+      window.localStorage.setItem(UPVOTED_STORAGE_KEY, JSON.stringify(confirmedUpvotedIssues))
+      console.info("[community] like toggle saved", { ticketId, liked })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upvote issue.")
+      setUpvotedIssues(upvotedIssues)
+      setIssues(previousIssues)
+      window.localStorage.setItem(UPVOTED_STORAGE_KEY, JSON.stringify(upvotedIssues))
+      setError(err instanceof Error ? err.message : "Failed to update like.")
+    } finally {
+      setPendingUpvoteTicketId(null)
     }
   }
 
@@ -238,7 +298,7 @@ export function CommunityPage() {
                       </span>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
-                        {issue.location}
+                        {getComplaintLocationLabel(issue)}
                       </span>
                     </div>
                   </div>
@@ -250,7 +310,7 @@ export function CommunityPage() {
                         event.preventDefault()
                         void handleUpvote(issue.ticketId)
                       }}
-                      disabled={upvotedIssues.includes(issue.ticketId)}
+                      disabled={pendingUpvoteTicketId === issue.ticketId}
                       className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                         upvotedIssues.includes(issue.ticketId)
                           ? "bg-primary text-primary-foreground"

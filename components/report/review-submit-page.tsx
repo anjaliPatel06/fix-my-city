@@ -16,7 +16,11 @@ export function ReviewSubmitPage() {
   const [data, setData] = useState(reportData)
 
   const handleFieldChange = (field: string, value: string) => {
-    setData((prev) => ({ ...prev, [field]: value }))
+    setData((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === "address" ? { exactLocation: value } : {}),
+    }))
   }
 
   const handleSubmit = async () => {
@@ -31,6 +35,7 @@ export function ReviewSubmitPage() {
     const payload = {
       ...data,
       address: data.address || profile?.addressLine1 || "",
+      exactLocation: data.exactLocation || data.address || profile?.addressLine1 || "",
       city: data.city || profile?.city || "",
       pincode: data.pincode || profile?.pincode || "",
       userEmail: user.email,
@@ -68,7 +73,7 @@ export function ReviewSubmitPage() {
 
   const editableFields = [
     { key: "category", label: "Category" },
-    { key: "address", label: "Address" },
+    { key: "address", label: "Area" },
     { key: "city", label: "City" },
     { key: "pincode", label: "Pincode" },
     { key: "description", label: "Description" },

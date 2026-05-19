@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      token: session.token,
       expiresAt: session.expiresAt,
       launchLink,
     });

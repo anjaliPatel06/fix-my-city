@@ -34,7 +34,10 @@ function ReviewSubmitPage() {
     const handleFieldChange = (field, value)=>{
         setData((prev)=>({
                 ...prev,
-                [field]: value
+                [field]: value,
+                ...field === "address" ? {
+                    exactLocation: value
+                } : {}
             }));
     };
     const handleSubmit = async ()=>{
@@ -47,6 +50,7 @@ function ReviewSubmitPage() {
         const payload = {
             ...data,
             address: data.address || profile?.addressLine1 || "",
+            exactLocation: data.exactLocation || data.address || profile?.addressLine1 || "",
             city: data.city || profile?.city || "",
             pincode: data.pincode || profile?.pincode || "",
             userEmail: user.email,
@@ -86,7 +90,7 @@ function ReviewSubmitPage() {
         },
         {
             key: "address",
-            label: "Address"
+            label: "Area"
         },
         {
             key: "city",
@@ -115,7 +119,7 @@ function ReviewSubmitPage() {
                     children: "Review Your Report"
                 }, void 0, false, {
                     fileName: "[project]/components/report/review-submit-page.tsx",
-                    lineNumber: 81,
+                    lineNumber: 86,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -123,7 +127,7 @@ function ReviewSubmitPage() {
                     children: "Make sure everything is correct before submitting"
                 }, void 0, false, {
                     fileName: "[project]/components/report/review-submit-page.tsx",
-                    lineNumber: 82,
+                    lineNumber: 87,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -134,7 +138,7 @@ function ReviewSubmitPage() {
                             children: "i"
                         }, void 0, false, {
                             fileName: "[project]/components/report/review-submit-page.tsx",
-                            lineNumber: 85,
+                            lineNumber: 90,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -144,20 +148,20 @@ function ReviewSubmitPage() {
                                     children: "Note:"
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/review-submit-page.tsx",
-                                    lineNumber: 87,
+                                    lineNumber: 92,
                                     columnNumber: 13
                                 }, this),
                                 " These details were filled automatically from your AI call. Review and correct if needed."
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/report/review-submit-page.tsx",
-                            lineNumber: 86,
+                            lineNumber: 91,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/report/review-submit-page.tsx",
-                    lineNumber: 84,
+                    lineNumber: 89,
                     columnNumber: 9
                 }, this),
                 data.photoUrl && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -168,7 +172,7 @@ function ReviewSubmitPage() {
                             children: "Photo"
                         }, void 0, false, {
                             fileName: "[project]/components/report/review-submit-page.tsx",
-                            lineNumber: 94,
+                            lineNumber: 99,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
@@ -177,13 +181,13 @@ function ReviewSubmitPage() {
                             className: "w-full h-64 object-cover rounded-lg"
                         }, void 0, false, {
                             fileName: "[project]/components/report/review-submit-page.tsx",
-                            lineNumber: 95,
+                            lineNumber: 100,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/report/review-submit-page.tsx",
-                    lineNumber: 93,
+                    lineNumber: 98,
                     columnNumber: 11
                 }, this),
                 data.departmentPrediction && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -194,7 +198,7 @@ function ReviewSubmitPage() {
                             children: "Predicted Department"
                         }, void 0, false, {
                             fileName: "[project]/components/report/review-submit-page.tsx",
-                            lineNumber: 105,
+                            lineNumber: 110,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -202,13 +206,13 @@ function ReviewSubmitPage() {
                             children: data.departmentPrediction.department
                         }, void 0, false, {
                             fileName: "[project]/components/report/review-submit-page.tsx",
-                            lineNumber: 108,
+                            lineNumber: 113,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/report/review-submit-page.tsx",
-                    lineNumber: 104,
+                    lineNumber: 109,
                     columnNumber: 11
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -226,7 +230,7 @@ function ReviewSubmitPage() {
                                             children: label
                                         }, void 0, false, {
                                             fileName: "[project]/components/report/review-submit-page.tsx",
-                                            lineNumber: 121,
+                                            lineNumber: 126,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -236,18 +240,18 @@ function ReviewSubmitPage() {
                                                 className: "w-4 h-4 text-muted-foreground"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/report/review-submit-page.tsx",
-                                                lineNumber: 126,
+                                                lineNumber: 131,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/components/report/review-submit-page.tsx",
-                                            lineNumber: 122,
+                                            lineNumber: 127,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/report/review-submit-page.tsx",
-                                    lineNumber: 120,
+                                    lineNumber: 125,
                                     columnNumber: 15
                                 }, this),
                                 editingField === key ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -262,27 +266,27 @@ function ReviewSubmitPage() {
                                                     children: "Low"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/report/review-submit-page.tsx",
-                                                    lineNumber: 138,
+                                                    lineNumber: 143,
                                                     columnNumber: 23
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
                                                     children: "Medium"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/report/review-submit-page.tsx",
-                                                    lineNumber: 139,
+                                                    lineNumber: 144,
                                                     columnNumber: 23
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
                                                     children: "High"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/report/review-submit-page.tsx",
-                                                    lineNumber: 140,
+                                                    lineNumber: 145,
                                                     columnNumber: 23
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/report/review-submit-page.tsx",
-                                            lineNumber: 133,
+                                            lineNumber: 138,
                                             columnNumber: 21
                                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
                                             value: fieldValue,
@@ -291,7 +295,7 @@ function ReviewSubmitPage() {
                                             rows: key === "description" ? 3 : 1
                                         }, void 0, false, {
                                             fileName: "[project]/components/report/review-submit-page.tsx",
-                                            lineNumber: 143,
+                                            lineNumber: 148,
                                             columnNumber: 21
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -300,13 +304,13 @@ function ReviewSubmitPage() {
                                             children: "Done"
                                         }, void 0, false, {
                                             fileName: "[project]/components/report/review-submit-page.tsx",
-                                            lineNumber: 150,
+                                            lineNumber: 155,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/report/review-submit-page.tsx",
-                                    lineNumber: 131,
+                                    lineNumber: 136,
                                     columnNumber: 17
                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     children: key === "urgency" ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -314,31 +318,31 @@ function ReviewSubmitPage() {
                                         children: data.urgency
                                     }, void 0, false, {
                                         fileName: "[project]/components/report/review-submit-page.tsx",
-                                        lineNumber: 160,
+                                        lineNumber: 165,
                                         columnNumber: 21
                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                         className: "text-foreground font-medium whitespace-pre-wrap",
                                         children: fieldValue
                                     }, void 0, false, {
                                         fileName: "[project]/components/report/review-submit-page.tsx",
-                                        lineNumber: 166,
+                                        lineNumber: 171,
                                         columnNumber: 21
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/review-submit-page.tsx",
-                                    lineNumber: 158,
+                                    lineNumber: 163,
                                     columnNumber: 17
                                 }, this)
                             ]
                         }, key, true, {
                             fileName: "[project]/components/report/review-submit-page.tsx",
-                            lineNumber: 119,
+                            lineNumber: 124,
                             columnNumber: 15
                         }, this);
                     })
                 }, void 0, false, {
                     fileName: "[project]/components/report/review-submit-page.tsx",
-                    lineNumber: 114,
+                    lineNumber: 119,
                     columnNumber: 9
                 }, this),
                 submitError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -346,7 +350,7 @@ function ReviewSubmitPage() {
                     children: submitError
                 }, void 0, false, {
                     fileName: "[project]/components/report/review-submit-page.tsx",
-                    lineNumber: 176,
+                    lineNumber: 181,
                     columnNumber: 11
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -361,14 +365,14 @@ function ReviewSubmitPage() {
                                     className: "w-5 h-5"
                                 }, void 0, false, {
                                     fileName: "[project]/components/report/review-submit-page.tsx",
-                                    lineNumber: 187,
+                                    lineNumber: 192,
                                     columnNumber: 13
                                 }, this),
                                 "Back"
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/report/review-submit-page.tsx",
-                            lineNumber: 182,
+                            lineNumber: 187,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -381,7 +385,7 @@ function ReviewSubmitPage() {
                                         className: "w-5 h-5 animate-spin"
                                     }, void 0, false, {
                                         fileName: "[project]/components/report/review-submit-page.tsx",
-                                        lineNumber: 198,
+                                        lineNumber: 203,
                                         columnNumber: 17
                                     }, this),
                                     "Submitting..."
@@ -393,31 +397,31 @@ function ReviewSubmitPage() {
                                         className: "w-5 h-5"
                                     }, void 0, false, {
                                         fileName: "[project]/components/report/review-submit-page.tsx",
-                                        lineNumber: 204,
+                                        lineNumber: 209,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true)
                         }, void 0, false, {
                             fileName: "[project]/components/report/review-submit-page.tsx",
-                            lineNumber: 191,
+                            lineNumber: 196,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/report/review-submit-page.tsx",
-                    lineNumber: 181,
+                    lineNumber: 186,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/components/report/review-submit-page.tsx",
-            lineNumber: 80,
+            lineNumber: 85,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/components/report/review-submit-page.tsx",
-        lineNumber: 79,
+        lineNumber: 84,
         columnNumber: 5
     }, this);
 }

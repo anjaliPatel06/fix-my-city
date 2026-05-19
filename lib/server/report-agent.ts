@@ -17,6 +17,8 @@ type RequestedField =
   | "description"
   | "city"
   | "address"
+  | "exactLocation"
+  | "landmark"
   | "pincode"
   | "urgency";
 
@@ -37,6 +39,8 @@ export const REPORT_RESPONSE_SCHEMA: Schema = {
         category: { type: SchemaType.STRING },
         description: { type: SchemaType.STRING },
         address: { type: SchemaType.STRING },
+        exactLocation: { type: SchemaType.STRING },
+        landmark: { type: SchemaType.STRING },
         city: { type: SchemaType.STRING },
         pincode: { type: SchemaType.STRING },
         urgency: {
@@ -45,7 +49,16 @@ export const REPORT_RESPONSE_SCHEMA: Schema = {
           enum: ["High", "Medium", "Low"],
         },
       },
-      required: ["category", "description", "address", "city", "pincode", "urgency"],
+      required: [
+        "category",
+        "description",
+        "address",
+        "exactLocation",
+        "landmark",
+        "city",
+        "pincode",
+        "urgency",
+      ],
     },
     complete: { type: SchemaType.BOOLEAN },
   },
@@ -60,15 +73,21 @@ Your job is to help the citizen report a civic issue and collect these fields:
 2. description
 3. city
 4. address
-5. pincode
-6. urgency
+5. exactLocation
+6. landmark
+7. pincode
+8. urgency
 
 Strict rules:
 - Ask only ONE follow-up question at a time.
 - Use the current extracted fields as the source of truth. Never erase already known fields.
 - Update fields only when the user's latest message gives new information.
-- If the user gives an issue type like garbage, pothole, streetlight, water leakage, etc., fill category immediately.
+- Supported categories include Pothole, Garbage, Streetlight, Water Leakage, Sewage, Traffic Issue, Pollution, Park Issue, Animal Issue, Fire Hazard, and General Issue.
+- If the user gives an issue type like garbage, pothole, streetlight, water leakage, sewage, traffic, pollution, park, animal, fire hazard, etc., fill category immediately.
 - If the user describes the problem in a sentence, use that sentence as description.
+- Ask for exact area/location/landmark only after city and pincode are known.
+- address, exactLocation, and landmark must contain only the exact area/location/landmark, not the complaint description.
+- Keep address, exactLocation, and landmark aligned when the user gives one precise location answer.
 - If all required fields are known, set complete to true and reply with a short confirmation in Hinglish.
 - Return valid JSON only. No markdown, no explanation outside JSON.
 - If a field is still unknown, set it to "Extracting...".`;
@@ -214,11 +233,20 @@ export function normalizeReportConversationFields(
     address: isKnownValue(input?.address)
       ? String(input?.address).trim()
       : UNKNOWN_REPORT_VALUE,
+    exactLocation: isKnownValue(input?.exactLocation)
+      ? String(input?.exactLocation).trim()
+      : UNKNOWN_REPORT_VALUE,
+    landmark: isKnownValue(input?.landmark)
+      ? String(input?.landmark).trim()
+      : UNKNOWN_REPORT_VALUE,
     city: isKnownValue(input?.city) ? String(input?.city).trim() : UNKNOWN_REPORT_VALUE,
     pincode: isKnownValue(input?.pincode)
       ? String(input?.pincode).trim()
       : UNKNOWN_REPORT_VALUE,
     urgency: normalizeUrgency(input?.urgency),
+    imageUrl: isKnownValue(input?.imageUrl) ? String(input?.imageUrl).trim() : undefined,
+    latitude: typeof input?.latitude === "number" ? input.latitude : undefined,
+    longitude: typeof input?.longitude === "number" ? input.longitude : undefined,
   };
 }
 
@@ -242,6 +270,12 @@ function mergeFields(
     address: isKnownValue(normalizedIncoming.address)
       ? normalizedIncoming.address
       : baseFields.address,
+    exactLocation: isKnownValue(normalizedIncoming.exactLocation)
+      ? normalizedIncoming.exactLocation
+      : baseFields.exactLocation,
+    landmark: isKnownValue(normalizedIncoming.landmark)
+      ? normalizedIncoming.landmark
+      : baseFields.landmark,
     city: isKnownValue(normalizedIncoming.city)
       ? normalizedIncoming.city
       : baseFields.city,
@@ -249,6 +283,9 @@ function mergeFields(
       ? normalizedIncoming.pincode
       : baseFields.pincode,
     urgency: nextUrgency,
+    imageUrl: normalizedIncoming.imageUrl ?? baseFields.imageUrl,
+    latitude: normalizedIncoming.latitude ?? baseFields.latitude,
+    longitude: normalizedIncoming.longitude ?? baseFields.longitude,
   } satisfies ReportConversationFields;
 }
 
@@ -264,31 +301,62 @@ function parseJsonResponse(text: string) {
   return JSON.parse(trimmed.slice(firstBrace, lastBrace + 1));
 }
 
+export const REPORT_CATEGORY_MATCHERS: Array<{ keywords: string[]; category: string }> = [
+  { keywords: ["garbage", "kachra", "waste", "trash", "dump"], category: "Garbage" },
+  {
+    keywords: [
+      "pothole",
+      "gadda",
+      "road damage",
+      "damaged road",
+      "broken road",
+      "footpath",
+      "sidewalk",
+    ],
+    category: "Pothole",
+  },
+  {
+    keywords: ["streetlight", "street light", "light pole", "light kharab"],
+    category: "Streetlight",
+  },
+  {
+    keywords: ["water leakage", "water leak", "paani leak", "pipeline", "tap leak"],
+    category: "Water Leakage",
+  },
+  {
+    keywords: ["sewer", "sewage", "manhole", "drainage", "drain overflow", "nali"],
+    category: "Sewage",
+  },
+  {
+    keywords: ["traffic signal", "traffic", "signal", "red light", "parking", "jam"],
+    category: "Traffic Issue",
+  },
+  {
+    keywords: ["pollution", "smoke", "noise", "air pollution", "water pollution"],
+    category: "Pollution",
+  },
+  {
+    keywords: ["park", "garden", "tree", "branch", "playground"],
+    category: "Park Issue",
+  },
+  {
+    keywords: ["dog", "stray animal", "animal", "cow", "monkey"],
+    category: "Animal Issue",
+  },
+  {
+    keywords: ["fire", "gas leak", "flammable", "short circuit", "fire hazard"],
+    category: "Fire Hazard",
+  },
+  {
+    keywords: ["general issue", "complaint", "other issue"],
+    category: "General Issue",
+  },
+];
+
 function detectCategory(message: string) {
   const text = message.toLowerCase();
 
-  const categoryMatchers: Array<{ keywords: string[]; category: string }> = [
-    { keywords: ["garbage", "kachra", "waste", "trash"], category: "Garbage" },
-    { keywords: ["pothole", "gadda", "road damage"], category: "Pothole" },
-    {
-      keywords: ["streetlight", "street light", "light pole", "light kharab"],
-      category: "Broken Streetlight",
-    },
-    {
-      keywords: ["water leakage", "water leak", "paani leak", "pipeline", "sewer", "drain"],
-      category: "Water Leakage",
-    },
-    {
-      keywords: ["traffic signal", "signal", "red light"],
-      category: "Traffic Signal Issue",
-    },
-    {
-      keywords: ["dog", "stray animal", "animal"],
-      category: "Stray Animals",
-    },
-  ];
-
-  const matchedCategory = categoryMatchers.find(({ keywords }) =>
+  const matchedCategory = REPORT_CATEGORY_MATCHERS.find(({ keywords }) =>
     keywords.some((keyword) => text.includes(keyword)),
   );
 
@@ -389,8 +457,38 @@ function detectCity(message: string) {
   return undefined;
 }
 
-function detectAddress(message: string) {
+function cleanLocationCandidate(value?: string) {
+  if (!value) return undefined;
+
+  const cleaned = titleCase(
+    value
+      .replace(
+        /\b(?:causing|create|creating|due|because|with|especially|during|increase|risk|accidents?|traffic|congestion|hai|is|are|on|for)\b.*$/i,
+        "",
+      )
+      .replace(/[.,;].*$/, "")
+      .replace(/\s+/g, " ")
+      .trim(),
+  );
+
+  if (!cleaned || cleaned.length < 3 || isFillerReply(cleaned)) return undefined;
+  return cleaned;
+}
+
+function extractLandmark(message: string) {
   const text = message.trim();
+  const match = text.match(
+    /\b(?:near|opposite|behind|landmark|beside|next to)\s+(.{3,80})/i,
+  );
+
+  return cleanLocationCandidate(match?.[1]);
+}
+
+function detectAddress(message: string, options: { preciseOnly?: boolean } = {}) {
+  const text = message.trim();
+  const landmark = extractLandmark(text);
+  if (landmark) return landmark;
+
   const addressHints = [
     "road",
     "street",
@@ -406,7 +504,10 @@ function detectAddress(message: string) {
     "behind",
   ];
 
-  if (addressHints.some((hint) => text.toLowerCase().includes(hint))) {
+  if (
+    addressHints.some((hint) => text.toLowerCase().includes(hint)) &&
+    (!options.preciseOnly || text.split(/\s+/).length <= 8)
+  ) {
     return text;
   }
 
@@ -428,8 +529,10 @@ function getNextMissingField(fields: ReportConversationFields): RequestedField |
   if (!isKnownValue(fields.category)) return "category";
   if (!isKnownValue(fields.description)) return "description";
   if (!isKnownValue(fields.city)) return "city";
-  if (!isKnownValue(fields.address)) return "address";
   if (!/^\d{6}$/.test(fields.pincode.trim())) return "pincode";
+  if (!isKnownValue(fields.exactLocation)) {
+    return "exactLocation";
+  }
   return null;
 }
 
@@ -458,8 +561,13 @@ function inferRequestedField(
   }
 
   if (lastAssistantMessage.includes("pincode")) return "pincode";
-  if (lastAssistantMessage.includes("address") || lastAssistantMessage.includes("area")) {
-    return "address";
+  if (
+    lastAssistantMessage.includes("exact") ||
+    lastAssistantMessage.includes("landmark") ||
+    lastAssistantMessage.includes("area") ||
+    lastAssistantMessage.includes("address")
+  ) {
+    return "exactLocation";
   }
   if (
     lastAssistantMessage.includes("city") ||
@@ -481,7 +589,14 @@ function inferRequestedField(
     lastAssistantMessage.includes("issue") ||
     lastAssistantMessage.includes("garbage") ||
     lastAssistantMessage.includes("pothole") ||
-    lastAssistantMessage.includes("streetlight")
+    lastAssistantMessage.includes("streetlight") ||
+    lastAssistantMessage.includes("water") ||
+    lastAssistantMessage.includes("sewage") ||
+    lastAssistantMessage.includes("traffic") ||
+    lastAssistantMessage.includes("pollution") ||
+    lastAssistantMessage.includes("park") ||
+    lastAssistantMessage.includes("animal") ||
+    lastAssistantMessage.includes("fire")
   ) {
     return "category";
   }
@@ -528,7 +643,19 @@ function applyContextualAnswer(
       return {};
     }
     case "address":
-      return text.length >= 4 ? { address: text } : {};
+    case "exactLocation": {
+      const landmark = extractLandmark(text);
+      const location = detectAddress(text) || text;
+      return text.length >= 4
+        ? {
+            address: location,
+            exactLocation: location,
+            ...(landmark ? { landmark } : {}),
+          }
+        : {};
+    }
+    case "landmark":
+      return text.length >= 3 ? { landmark: text } : {};
     case "pincode": {
       const pincode = detectPincode(text);
       return pincode ? { pincode } : {};
@@ -560,9 +687,14 @@ function applyHeuristics(userMessage: string, currentFields: ReportConversationF
     nextFields.city = city;
   }
 
-  const address = detectAddress(userMessage);
+  const address = detectAddress(userMessage, { preciseOnly: true });
   if (!isKnownValue(nextFields.address) && address) {
     nextFields.address = address;
+  }
+
+  const landmark = extractLandmark(userMessage);
+  if (!isKnownValue(nextFields.landmark) && landmark) {
+    nextFields.landmark = landmark;
   }
 
   const description = detectDescription(userMessage);
@@ -583,14 +715,14 @@ function areRequiredFieldsComplete(fields: ReportConversationFields) {
     isKnownValue(fields.category) &&
     isKnownValue(fields.description) &&
     isKnownValue(fields.city) &&
-    isKnownValue(fields.address) &&
-    /^\d{6}$/.test(fields.pincode.trim())
+    /^\d{6}$/.test(fields.pincode.trim()) &&
+    isKnownValue(fields.exactLocation)
   );
 }
 
 export function buildNextQuestion(fields: ReportConversationFields) {
   if (!isKnownValue(fields.category)) {
-    return "Kaunsi civic problem hai, jaise garbage, pothole ya streetlight issue?";
+    return "Kaunsi civic problem hai, jaise garbage, pothole, streetlight, water leakage, sewage, traffic, pollution, park, animal ya fire issue?";
   }
 
   if (!isKnownValue(fields.description)) {
@@ -601,19 +733,20 @@ export function buildNextQuestion(fields: ReportConversationFields) {
     return "Yeh kis city mein hai?";
   }
 
-  if (!isKnownValue(fields.address)) {
-    return "Is jagah ka exact address ya area batayein.";
-  }
-
   if (!/^\d{6}$/.test(fields.pincode.trim())) {
     return "Wahan ka 6 digit pincode batayein.";
+  }
+
+  if (!isKnownValue(fields.exactLocation)) {
+    return "Please share the exact location or nearby landmark.";
   }
 
   return "Dhanyavaad, maine saari details note kar li hain.";
 }
 
 function buildConfirmationMessage(fields: ReportConversationFields) {
-  return `Dhanyavaad. Maine note kar liya: ${fields.category}, ${fields.city}, ${fields.address}, pincode ${fields.pincode}.`;
+  const location = isKnownValue(fields.exactLocation) ? fields.exactLocation : fields.address;
+  return `Dhanyavaad. Maine note kar liya: ${fields.category}, ${fields.city}, ${location}, pincode ${fields.pincode}.`;
 }
 
 function buildFallbackResponse(
@@ -719,6 +852,23 @@ ${trimmedUserMessage}`;
     });
     const parsed = parseJsonResponse(rawResponse);
     const modelExtracted = normalizeReportConversationFields(parsed?.extracted);
+    if (requestedField !== "exactLocation") {
+      if (!isKnownValue(normalizedCurrentExtracted.exactLocation)) {
+        modelExtracted.exactLocation = UNKNOWN_REPORT_VALUE;
+      }
+
+      if (isKnownValue(heuristicExtracted.address)) {
+        modelExtracted.address = heuristicExtracted.address;
+      } else if (!isKnownValue(normalizedCurrentExtracted.address)) {
+        modelExtracted.address = UNKNOWN_REPORT_VALUE;
+      }
+
+      if (!isKnownValue(normalizedCurrentExtracted.landmark)) {
+        modelExtracted.landmark = isKnownValue(heuristicExtracted.landmark)
+          ? heuristicExtracted.landmark
+          : UNKNOWN_REPORT_VALUE;
+      }
+    }
     const mergedFields = mergeFields(contextualExtracted, modelExtracted);
     const extracted = mergeFields(
       mergedFields,

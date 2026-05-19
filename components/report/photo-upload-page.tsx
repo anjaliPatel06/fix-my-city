@@ -38,6 +38,7 @@ export function PhotoUploadPage() {
             existingFields: {
               category: reportData.category || "",
               address: reportData.address || "",
+              exactLocation: reportData.exactLocation || "",
               city: reportData.city || "",
               pincode: reportData.pincode || "",
               urgency: reportData.urgency || "",
@@ -53,6 +54,12 @@ export function PhotoUploadPage() {
             category: d.category && d.category !== "Unknown" ? d.category : reportData.category,
             description: d.description && d.description !== "Extracting..." ? d.description : reportData.description,
             address: d.address && d.address !== "Extracting..." ? d.address : reportData.address,
+            exactLocation:
+              d.exactLocation && d.exactLocation !== "Extracting..."
+                ? d.exactLocation
+                : d.address && d.address !== "Extracting..."
+                  ? d.address
+                  : reportData.exactLocation,
             city: d.city && d.city !== "Extracting..." ? d.city : reportData.city,
             pincode: d.pincode && d.pincode !== "Extracting..." ? d.pincode : reportData.pincode,
             urgency: d.urgency && d.urgency !== "Extracting..." ? d.urgency : reportData.urgency,

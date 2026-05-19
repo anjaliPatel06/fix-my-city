@@ -7,6 +7,8 @@ import type { DepartmentPrediction } from "@/lib/types"
 export interface ReportData {
   category?: string
   address?: string
+  exactLocation?: string
+  landmark?: string
   city?: string
   pincode?: string
   description?: string

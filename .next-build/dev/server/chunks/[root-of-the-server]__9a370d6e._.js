@@ -261,7 +261,8 @@ const DEPARTMENT_ALIAS_MAP = {
     transport: "Transport",
     "transport department": "Transport",
     "fire department": "Fire Department",
-    "general complaints cell": "General Complaints Cell"
+    "general complaints cell": "General Complaints Cell",
+    "complaints cell": "General Complaints Cell"
 };
 const OFFICERS_BY_DEPARTMENT = new Map(DEPARTMENT_ADMIN_SEEDS.map((admin)=>[
         admin.department,
@@ -330,7 +331,8 @@ const DB_FILE = __TURBOPACK__imported__module__$5b$externals$5d2f$node$3a$path__
 const DEFAULT_DATABASE = {
     users: [],
     complaints: [],
-    whatsappSessions: []
+    whatsappSessions: [],
+    whatsappReports: []
 };
 let mutationQueue = Promise.resolve();
 async function ensureDatabaseFile() {
@@ -351,13 +353,15 @@ async function readRawDatabase() {
         return {
             users: Array.isArray(parsed.users) ? parsed.users : [],
             complaints: Array.isArray(parsed.complaints) ? parsed.complaints : [],
-            whatsappSessions: Array.isArray(parsed.whatsappSessions) ? parsed.whatsappSessions : []
+            whatsappSessions: Array.isArray(parsed.whatsappSessions) ? parsed.whatsappSessions : [],
+            whatsappReports: Array.isArray(parsed.whatsappReports) ? parsed.whatsappReports : []
         };
     } catch  {
         return {
             users: [],
             complaints: [],
-            whatsappSessions: []
+            whatsappSessions: [],
+            whatsappReports: []
         };
     }
 }
@@ -370,6 +374,7 @@ async function ensureSeedData(database) {
         database.users = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$server$2f$departments$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["buildSeedAdminUsers"])();
         database.complaints = [];
         database.whatsappSessions = [];
+        database.whatsappReports = [];
         return true;
     }
     const hasLegacyAdmin = database.users.some((user)=>user.role === "admin" && (!user.department || user.email === "admin@fixmycity.com" || user.name === "City Admin"));
@@ -379,6 +384,7 @@ async function ensureSeedData(database) {
     database.users = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$server$2f$departments$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["buildSeedAdminUsers"])();
     database.complaints = [];
     database.whatsappSessions = [];
+    database.whatsappReports = [];
     return true;
 }
 async function readDatabase() {
@@ -599,6 +605,8 @@ function buildFallbackDepartmentPrediction(department) {
 "use strict";
 
 __turbopack_context__.s([
+    "addComplaintComment",
+    ()=>addComplaintComment,
     "buildComplaintRecord",
     ()=>buildComplaintRecord,
     "buildComplaintTimeline",
@@ -613,6 +621,8 @@ __turbopack_context__.s([
     ()=>inferDepartment,
     "pickComplaintImage",
     ()=>pickComplaintImage,
+    "toggleComplaintUpvote",
+    ()=>toggleComplaintUpvote,
     "updateComplaintStatusForDepartmentAdmin",
     ()=>updateComplaintStatusForDepartmentAdmin,
     "upvoteComplaint",
@@ -630,28 +640,31 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$server$2f$department$
 ;
 function inferDepartment(category, description = "") {
     const normalized = `${category} ${description}`.toLowerCase();
-    if (normalized.includes("garbage") || normalized.includes("waste") || normalized.includes("trash")) {
+    if (normalized.includes("general issue") || normalized.includes("general complaint") || normalized.includes("other issue")) {
+        return "General Complaints Cell";
+    }
+    if (normalized.includes("garbage") || normalized.includes("waste") || normalized.includes("trash") || normalized.includes("dump")) {
         return "Sanitation";
     }
-    if (normalized.includes("pothole") || normalized.includes("road") || normalized.includes("footpath")) {
+    if (normalized.includes("pothole") || normalized.includes("road") || normalized.includes("footpath") || normalized.includes("sidewalk")) {
         return "Public Works";
     }
-    if (normalized.includes("streetlight") || normalized.includes("street light") || normalized.includes("light")) {
+    if (normalized.includes("streetlight") || normalized.includes("street light") || normalized.includes("light pole") || normalized.includes("light")) {
         return "Electricity";
     }
-    if (normalized.includes("sewer") || normalized.includes("sewage") || normalized.includes("manhole") || normalized.includes("drainage")) {
+    if (normalized.includes("sewer") || normalized.includes("sewage") || normalized.includes("manhole") || normalized.includes("drainage") || normalized.includes("drain overflow")) {
         return "Sewerage";
     }
     if (normalized.includes("water") || normalized.includes("leak") || normalized.includes("pipeline") || normalized.includes("tap")) {
         return "Water Supply";
     }
-    if (normalized.includes("signal") || normalized.includes("traffic") || normalized.includes("parking")) {
+    if (normalized.includes("signal") || normalized.includes("traffic") || normalized.includes("parking") || normalized.includes("jam")) {
         return "Traffic Police";
     }
     if (normalized.includes("encroachment") || normalized.includes("hawker") || normalized.includes("municipal")) {
         return "Municipal Corp";
     }
-    if (normalized.includes("tree") || normalized.includes("park") || normalized.includes("branch") || normalized.includes("garden")) {
+    if (normalized.includes("tree") || normalized.includes("park") || normalized.includes("branch") || normalized.includes("garden") || normalized.includes("playground")) {
         return "Horticulture";
     }
     if (normalized.includes("pollution") || normalized.includes("smoke") || normalized.includes("noise") || normalized.includes("air")) {
@@ -663,7 +676,7 @@ function inferDepartment(category, description = "") {
     if (normalized.includes("illegal construction") || normalized.includes("unauthorized") || normalized.includes("building")) {
         return "Town Planning";
     }
-    if (normalized.includes("animal") || normalized.includes("dog") || normalized.includes("cow")) {
+    if (normalized.includes("animal") || normalized.includes("dog") || normalized.includes("cow") || normalized.includes("monkey")) {
         return "Animal Control";
     }
     if (normalized.includes("toilet") || normalized.includes("washroom") || normalized.includes("public sanitation")) {
@@ -672,14 +685,15 @@ function inferDepartment(category, description = "") {
     if (normalized.includes("bus stop") || normalized.includes("transport") || normalized.includes("auto stand")) {
         return "Transport";
     }
-    if (normalized.includes("fire") || normalized.includes("gas leak") || normalized.includes("flammable")) {
+    if (normalized.includes("fire") || normalized.includes("gas leak") || normalized.includes("flammable") || normalized.includes("short circuit")) {
         return "Fire Department";
     }
-    return "Municipal Corp";
+    return "General Complaints Cell";
 }
-function buildLocation(address, city, pincode) {
+function buildLocation(address, city, pincode, landmark) {
     return [
         address,
+        landmark,
         city,
         pincode
     ].filter((value)=>value && value.trim() !== "").join(", ");
@@ -731,6 +745,47 @@ function pickComplaintImage(category, fallbackPhotoUrl) {
     if (normalized.includes("park")) return "/sunny-city-park.png";
     return "/pothole.png";
 }
+function normalizeOptionalText(value) {
+    const normalized = value?.trim();
+    if (!normalized) return undefined;
+    const lower = normalized.toLowerCase();
+    if ([
+        "extracting...",
+        "unknown",
+        "n/a",
+        "na"
+    ].includes(lower)) {
+        return undefined;
+    }
+    return normalized;
+}
+function normalizeActorId(value) {
+    return value.trim().toLowerCase();
+}
+function ensureEngagementFields(complaint) {
+    if (!Array.isArray(complaint.likedBy)) {
+        complaint.likedBy = [];
+    }
+    if (!Array.isArray(complaint.comments)) {
+        complaint.comments = [];
+    }
+    // Older reports only stored a numeric upvote count. Preserve that count by
+    // reserving legacy actor slots before applying the new per-user toggle model.
+    const legacyUpvoteCount = Math.max(0, complaint.upvotes || 0);
+    while(complaint.likedBy.length < legacyUpvoteCount){
+        complaint.likedBy.push(`legacy:${complaint.ticketId}:${complaint.likedBy.length + 1}`);
+    }
+    complaint.upvotes = complaint.likedBy.length;
+    complaint.commentsCount = complaint.comments.length;
+}
+function createCommentId(existingComments) {
+    const existingIds = new Set(existingComments.map((comment)=>comment.id));
+    let id = `CMT-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    while(existingIds.has(id)){
+        id = `CMT-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+    return id;
+}
 function buildComplaintRecord(input, existingTicketIds) {
     const now = new Date().toISOString();
     const fallbackDepartment = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$server$2f$departments$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["normalizeDepartmentName"])(inferDepartment(input.category, input.description));
@@ -739,6 +794,11 @@ function buildComplaintRecord(input, existingTicketIds) {
     const officer = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$server$2f$departments$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["getOfficerByDepartment"])(assignedDepartment);
     const ticketId = createUniqueTicketId(existingTicketIds);
     const status = "Submitted";
+    const exactLocation = normalizeOptionalText(input.exactLocation) || input.address;
+    const area = exactLocation;
+    const landmark = normalizeOptionalText(input.landmark);
+    const uploadedImage = normalizeOptionalText(input.imageUrl) || normalizeOptionalText(input.photoUrl);
+    const photoUrl = pickComplaintImage(input.category, uploadedImage);
     return {
         ticketId,
         userEmail: input.userEmail,
@@ -746,14 +806,21 @@ function buildComplaintRecord(input, existingTicketIds) {
         title: `${input.category} reported in ${input.city}`,
         category: input.category,
         description: input.description,
-        address: input.address,
+        address: area,
+        exactLocation,
+        landmark,
         city: input.city,
         pincode: input.pincode,
-        location: buildLocation(input.address, input.city, input.pincode),
+        location: buildLocation(exactLocation, input.city, input.pincode, landmark),
+        latitude: input.latitude,
+        longitude: input.longitude,
         urgency: input.urgency,
-        photoUrl: pickComplaintImage(input.category, input.photoUrl),
+        photoUrl,
+        imageUrl: uploadedImage || photoUrl,
         status,
         upvotes: 0,
+        likedBy: [],
+        comments: [],
         commentsCount: 0,
         assignedDepartment,
         departmentPrediction,
@@ -767,7 +834,7 @@ async function resolveDepartmentPrediction(input) {
     try {
         return await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$server$2f$department$2d$classifier$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["predictDepartmentFromInputs"])({
             description: input.description,
-            imageBase64: input.photoUrl
+            imageBase64: input.photoUrl?.startsWith("data:") ? input.photoUrl : undefined
         });
     } catch (error) {
         console.error("department classifier error:", error);
@@ -794,15 +861,85 @@ async function createComplaintForUser(input) {
     });
 }
 async function upvoteComplaint(ticketId) {
+    const { complaint } = await toggleComplaintUpvote({
+        ticketId,
+        actorId: "legacy-community-user"
+    });
+    return complaint;
+}
+async function toggleComplaintUpvote(input) {
+    const actorId = normalizeActorId(input.actorId);
+    if (!actorId) {
+        throw new Error("A user identifier is required to like an issue.");
+    }
     return (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$server$2f$database$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["updateDatabase"])((database)=>{
-        const complaint = database.complaints.find((entry)=>entry.ticketId === ticketId);
+        const complaint = database.complaints.find((entry)=>entry.ticketId === input.ticketId);
         if (!complaint) {
             throw new Error("Complaint not found.");
         }
-        complaint.upvotes += 1;
+        ensureEngagementFields(complaint);
+        const existingIndex = complaint.likedBy.indexOf(actorId);
+        const liked = existingIndex === -1;
+        if (liked) {
+            complaint.likedBy.push(actorId);
+        } else {
+            complaint.likedBy.splice(existingIndex, 1);
+        }
+        complaint.upvotes = complaint.likedBy.length;
         complaint.urgency = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$server$2f$departments$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["deriveUrgencyFromUpvotes"])(complaint.urgency, complaint.upvotes);
         complaint.updatedAt = new Date().toISOString();
-        return complaint;
+        console.info("[community] like toggle persisted", {
+            ticketId: complaint.ticketId,
+            actorId,
+            liked,
+            upvotes: complaint.upvotes
+        });
+        return {
+            complaint,
+            liked
+        };
+    });
+}
+async function addComplaintComment(input) {
+    const authorId = normalizeActorId(input.authorId);
+    const authorName = input.authorName.trim();
+    const body = input.body.trim();
+    if (!authorId) {
+        throw new Error("A user identifier is required to comment.");
+    }
+    if (!body) {
+        throw new Error("Comment cannot be empty.");
+    }
+    if (body.length > 500) {
+        throw new Error("Comment must be 500 characters or less.");
+    }
+    return (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$server$2f$database$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["updateDatabase"])((database)=>{
+        const complaint = database.complaints.find((entry)=>entry.ticketId === input.ticketId);
+        if (!complaint) {
+            throw new Error("Complaint not found.");
+        }
+        ensureEngagementFields(complaint);
+        const now = new Date().toISOString();
+        const comment = {
+            id: createCommentId(complaint.comments),
+            authorId,
+            authorName: authorName || "Community Member",
+            body,
+            createdAt: now
+        };
+        complaint.comments.push(comment);
+        complaint.commentsCount = complaint.comments.length;
+        complaint.updatedAt = now;
+        console.info("[community] comment persisted", {
+            ticketId: complaint.ticketId,
+            authorId,
+            commentId: comment.id,
+            commentsCount: complaint.commentsCount
+        });
+        return {
+            complaint,
+            comment
+        };
     });
 }
 const TIMELINE_SEQUENCE = [
@@ -895,10 +1032,15 @@ async function POST(req) {
         const category = String(body?.category ?? "").trim();
         const description = String(body?.description ?? "").trim();
         const address = String(body?.address ?? "").trim();
+        const exactLocation = String(body?.exactLocation ?? "").trim();
+        const landmark = String(body?.landmark ?? "").trim();
         const city = String(body?.city ?? "").trim();
         const pincode = String(body?.pincode ?? "").trim();
         const urgency = body?.urgency === "High" || body?.urgency === "Low" ? body.urgency : "Medium";
         const photoUrl = typeof body?.photoUrl === "string" ? body.photoUrl : undefined;
+        const imageUrl = typeof body?.imageUrl === "string" ? body.imageUrl : undefined;
+        const latitude = typeof body?.latitude === "number" ? body.latitude : undefined;
+        const longitude = typeof body?.longitude === "number" ? body.longitude : undefined;
         if (!userEmail || !userName || !category || !description || !address || !city || !pincode) {
             return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
                 success: false,
@@ -913,10 +1055,15 @@ async function POST(req) {
             category,
             description,
             address,
+            exactLocation: exactLocation || address,
+            landmark,
             city,
             pincode,
             urgency,
-            photoUrl
+            photoUrl,
+            imageUrl,
+            latitude,
+            longitude
         });
         return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
             success: true,

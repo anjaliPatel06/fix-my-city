@@ -157,6 +157,7 @@ const DEPARTMENT_ALIAS_MAP: Record<string, string> = {
   "transport department": "Transport",
   "fire department": "Fire Department",
   "general complaints cell": "General Complaints Cell",
+  "complaints cell": "General Complaints Cell",
 };
 
 const OFFICERS_BY_DEPARTMENT = new Map<string, ComplaintOfficer>(

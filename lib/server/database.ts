@@ -10,6 +10,7 @@ const DEFAULT_DATABASE: AppDatabase = {
   users: [],
   complaints: [],
   whatsappSessions: [],
+  whatsappReports: [],
 };
 
 let mutationQueue = Promise.resolve();
@@ -37,12 +38,16 @@ async function readRawDatabase(): Promise<AppDatabase> {
       whatsappSessions: Array.isArray(parsed.whatsappSessions)
         ? parsed.whatsappSessions
         : [],
+      whatsappReports: Array.isArray(parsed.whatsappReports)
+        ? parsed.whatsappReports
+        : [],
     };
   } catch {
     return {
       users: [],
       complaints: [],
       whatsappSessions: [],
+      whatsappReports: [],
     };
   }
 }
@@ -57,6 +62,7 @@ async function ensureSeedData(database: AppDatabase) {
     database.users = buildSeedAdminUsers() as StoredUser[];
     database.complaints = [];
     database.whatsappSessions = [];
+    database.whatsappReports = [];
     return true;
   }
 
@@ -73,6 +79,7 @@ async function ensureSeedData(database: AppDatabase) {
   database.users = buildSeedAdminUsers() as StoredUser[];
   database.complaints = [];
   database.whatsappSessions = [];
+  database.whatsappReports = [];
   return true;
 }
 

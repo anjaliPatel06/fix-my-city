@@ -99,7 +99,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "C:\\Users\\Nikhil Bhadoriya\\OneDrive\\Desktop\\Minor_Project\\FIX-MY-CITY",
+    "outputFileTracingRoot": "D:\\FIX-MY-CITY",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -157,7 +157,7 @@
       "proxyPrefetch": "flexible",
       "optimisticClientCache": true,
       "manualClientBasePath": false,
-      "cpus": 15,
+      "cpus": 11,
       "memoryBasedWorkersCount": false,
       "imgOptConcurrency": null,
       "imgOptTimeoutInSeconds": 7,
@@ -289,11 +289,11 @@
     "bundlePagesRouterDependencies": false,
     "configFileName": "next.config.mjs",
     "turbopack": {
-      "root": "C:\\Users\\Nikhil Bhadoriya\\OneDrive\\Desktop\\Minor_Project\\FIX-MY-CITY"
+      "root": "D:\\FIX-MY-CITY"
     },
     "distDirRoot": ".next-build"
   },
-  "appDir": "C:\\Users\\Nikhil Bhadoriya\\OneDrive\\Desktop\\Minor_Project\\FIX-MY-CITY",
+  "appDir": "D:\\FIX-MY-CITY",
   "relativeAppDir": "",
   "files": [
     ".next-build\\routes-manifest.json",

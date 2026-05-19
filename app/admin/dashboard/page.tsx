@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-context";
+import { getComplaintArea } from "@/lib/report-display";
 import type { ComplaintRecord } from "@/lib/types";
 import {
   AlertTriangle,
@@ -146,7 +147,7 @@ export default function AdminDashboardPage() {
       const searchableFields = [
         complaint.ticketId,
         complaint.category,
-        complaint.address,
+        getComplaintArea(complaint),
         complaint.city,
       ]
         .join(" ")
@@ -412,7 +413,7 @@ export default function AdminDashboardPage() {
                             {complaint.category}
                           </td>
                           <td className="px-4 py-2 align-top text-slate-800 dark:text-slate-100">
-                            {complaint.address}
+                            {getComplaintArea(complaint)}
                           </td>
                           <td className="px-4 py-2 align-top text-slate-800 dark:text-slate-100">
                             {complaint.city}
@@ -585,7 +586,7 @@ export default function AdminDashboardPage() {
                           <span className="font-medium">{complaint.status}</span>.
                         </p>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {complaint.address} • {complaint.city}
+                          {getComplaintArea(complaint)} • {complaint.city}
                         </p>
                       </div>
                     </li>
