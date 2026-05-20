@@ -1,3 +1,9 @@
-﻿node_modules
+node_modules
 .next
+.next-build
 .env*
+!.env.example
+public/uploads/
+*.log
+desktop.ini
+tsconfig.tsbuildinfo

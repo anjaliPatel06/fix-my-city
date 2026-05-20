@@ -34,6 +34,14 @@ export function AICallingPage() {
     description: "Listening...",
     urgency: "Medium",
   })
+  const extractedDataRef = useRef<ExtractedData>({
+    category: "Extracting...",
+    address: "Extracting...",
+    city: "Extracting...",
+    pincode: "...",
+    description: "Listening...",
+    urgency: "Medium",
+  })
 
   const [history, setHistory] = useState<{ role: string; content: string }[]>([])
   const historyRef = useRef<{ role: string; content: string }[]>([])
@@ -48,6 +56,20 @@ export function AICallingPage() {
     isMutedRef.current = isMuted
     isSpeakingRef.current = isSpeaking
   }, [history, callState, isMuted, isSpeaking])
+
+  useEffect(() => {
+    extractedDataRef.current = extractedData
+  }, [extractedData])
+
+  const mergeExtractedData = (current: ExtractedData, incoming?: Partial<ExtractedData>) => ({
+    category: incoming?.category && incoming.category !== "Extracting..." ? incoming.category : current.category,
+    address: incoming?.address && incoming.address !== "Extracting..." ? incoming.address : current.address,
+    city: incoming?.city && incoming.city !== "Extracting..." ? incoming.city : current.city,
+    pincode: incoming?.pincode && incoming.pincode !== "Extracting..." ? incoming.pincode : current.pincode,
+    description:
+      incoming?.description && incoming.description !== "Extracting..." ? incoming.description : current.description,
+    urgency: incoming?.urgency || current.urgency,
+  })
 
   // Start call manually to bypass autoplay restrictions that block audio
   const handleStartCall = () => {
@@ -179,22 +201,19 @@ export function AICallingPage() {
           const res = await fetch("/api/voice-agent", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ history: historyRef.current, userMessage: transcript }),
+            body: JSON.stringify({
+              history: historyRef.current,
+              userMessage: transcript,
+              currentExtracted: extractedDataRef.current,
+            }),
           })
           const data = await res.json()
           
           if (data.success && data.data) {
              const { agent_reply, extracted, complete } = data.data
-             
-             // Update UI with real extracted data occasionally. Don't overwrite existing good data with "Extracting..."
-             setExtractedData(prev => ({
-                category: extracted.category && extracted.category !== "Extracting..." ? extracted.category : prev.category,
-                address: extracted.address && extracted.address !== "Extracting..." ? extracted.address : prev.address,
-                city: extracted.city && extracted.city !== "Extracting..." ? extracted.city : prev.city,
-                pincode: extracted.pincode && extracted.pincode !== "Extracting..." ? extracted.pincode : prev.pincode,
-                description: extracted.description && extracted.description !== "Extracting..." ? extracted.description : prev.description,
-                urgency: extracted.urgency && extracted.urgency !== "Extracting..." ? extracted.urgency : prev.urgency
-             }))
+             const nextExtracted = mergeExtractedData(extractedDataRef.current, extracted)
+             extractedDataRef.current = nextExtracted
+             setExtractedData(nextExtracted)
 
              setConversation((prev) => [...prev, { role: "agent", content: agent_reply }])
              setHistory((prev) => [
@@ -215,13 +234,29 @@ export function AICallingPage() {
              }
           } else {
              console.warn("API returned error/false:", data)
-             await speakOutLoud("I didn't quite catch that.")
+             setConversation((prev) => [
+               ...prev,
+               {
+                 role: "agent",
+                 content: "Mujhe thodi technical dikkat aa rahi hai. Kripya ek baar phir se batayein.",
+               },
+             ])
+             await speakOutLoud("Mujhe thodi technical dikkat aa rahi hai. Kripya ek baar phir se batayein.")
+             setIsSpeaking(false)
              isSpeakingRef.current = false
              startListening()
           }
         } catch (error) {
           console.warn("API fetch exception:", error)
-          await speakOutLoud("I didn't quite catch that.")
+          setConversation((prev) => [
+            ...prev,
+            {
+              role: "agent",
+              content: "Connection issue aa gaya. Kripya apni baat ek baar phir boliye.",
+            },
+          ])
+          await speakOutLoud("Connection issue aa gaya. Kripya apni baat ek baar phir boliye.")
+          setIsSpeaking(false)
           isSpeakingRef.current = false
           startListening()
         }
@@ -268,7 +303,7 @@ export function AICallingPage() {
   }
 
   const handleProceed = () => {
-    updateReportData(extractedData)
+    updateReportData(extractedDataRef.current)
     router.push("/report/photo")
   }
 

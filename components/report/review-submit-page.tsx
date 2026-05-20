@@ -3,29 +3,66 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useReport } from "@/lib/report-context"
+import { useAuth } from "@/components/auth-context"
 import { ArrowLeft, ArrowRight, Edit2 } from "lucide-react"
 
 export function ReviewSubmitPage() {
   const router = useRouter()
   const { reportData, updateReportData } = useReport()
+  const { user, profile } = useAuth()
   const [editingField, setEditingField] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [data, setData] = useState(reportData)
 
   const handleFieldChange = (field: string, value: string) => {
-    setData((prev) => ({ ...prev, [field]: value }))
+    setData((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === "address" ? { exactLocation: value } : {}),
+    }))
   }
 
   const handleSubmit = async () => {
-    setIsSubmitting(true)
-    updateReportData(data)
+    if (!user) {
+      setSubmitError("Please sign in again before submitting your complaint.")
+      return
+    }
 
-    // Simulate API call
-    setTimeout(() => {
-      const tokenId = `FIXC${Date.now().toString().slice(-6).toUpperCase()}`
-      updateReportData({ tokenId })
-      router.push(`/report/success?token=${tokenId}`)
-    }, 1500)
+    setIsSubmitting(true)
+    setSubmitError(null)
+
+    const payload = {
+      ...data,
+      address: data.address || profile?.addressLine1 || "",
+      exactLocation: data.exactLocation || data.address || profile?.addressLine1 || "",
+      city: data.city || profile?.city || "",
+      pincode: data.pincode || profile?.pincode || "",
+      userEmail: user.email,
+      userName: user.name,
+    }
+
+    try {
+      updateReportData(payload)
+
+      const response = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || result?.success === false) {
+        throw new Error(result?.error || "Failed to submit complaint.")
+      }
+
+      updateReportData({ tokenId: result.ticketId })
+      router.push(`/report/success?token=${result.ticketId}`)
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Failed to submit complaint.")
+      setIsSubmitting(false)
+    }
   }
 
   const urgencyColors: Record<string, string> = {
@@ -34,22 +71,29 @@ export function ReviewSubmitPage() {
     High: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200",
   }
 
+  const editableFields = [
+    { key: "category", label: "Category" },
+    { key: "address", label: "Area" },
+    { key: "city", label: "City" },
+    { key: "pincode", label: "Pincode" },
+    { key: "description", label: "Description" },
+    { key: "urgency", label: "Urgency Level" },
+  ] as const
+
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-background to-secondary py-12">
       <div className="max-w-2xl mx-auto px-4 w-full">
         <h1 className="text-4xl md:text-5xl font-bold mb-2">Review Your Report</h1>
         <p className="text-lg text-muted-foreground mb-8">Make sure everything is correct before submitting</p>
 
-        {/* Note about AI-filled data */}
         <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-400 dark:border-blue-800 rounded-xl p-4 mb-8 flex gap-3">
-          <span className="text-lg flex-shrink-0">ℹ️</span>
+          <span className="text-lg flex-shrink-0">i</span>
           <p className="text-sm text-blue-900 dark:text-blue-200">
             <strong>Note:</strong> These details were filled automatically from your AI call. Review and correct if
             needed.
           </p>
         </div>
 
-        {/* Photo Preview */}
         {data.photoUrl && (
           <div className="bg-card rounded-xl p-6 border border-border mb-8">
             <p className="text-sm font-semibold text-muted-foreground mb-3">Photo</p>
@@ -61,17 +105,23 @@ export function ReviewSubmitPage() {
           </div>
         )}
 
-        {/* Details */}
+        {data.departmentPrediction && (
+          <div className="bg-card rounded-xl p-6 border border-border mb-8">
+            <p className="text-sm font-semibold text-muted-foreground mb-2 uppercase">
+              Predicted Department
+            </p>
+            <p className="text-xl font-semibold text-foreground">
+              {data.departmentPrediction.department}
+            </p>
+          </div>
+        )}
+
         <div className="space-y-4 mb-8">
-          {[
-            { key: "category", label: "Category" },
-            { key: "address", label: "Address" },
-            { key: "city", label: "City" },
-            { key: "pincode", label: "Pincode" },
-            { key: "description", label: "Description" },
-            { key: "urgency", label: "Urgency Level" },
-          ].map(({ key, label }) => (
-            <div key={key} className="bg-card rounded-xl p-6 border border-border">
+          {editableFields.map(({ key, label }) => {
+            const fieldValue = data[key] || ""
+
+            return (
+              <div key={key} className="bg-card rounded-xl p-6 border border-border">
               <div className="flex items-center justify-between mb-3">
                 <label className="text-sm font-semibold text-muted-foreground uppercase">{label}</label>
                 <button
@@ -86,7 +136,7 @@ export function ReviewSubmitPage() {
                 <div className="flex gap-2">
                   {key === "urgency" ? (
                     <select
-                      value={data[key as keyof typeof data] || ""}
+                      value={fieldValue}
                       onChange={(e) => handleFieldChange(key, e.target.value)}
                       className="flex-1 px-4 py-2 rounded-lg bg-background border border-border focus:outline-none focus:ring-2 focus:ring-primary"
                     >
@@ -96,7 +146,7 @@ export function ReviewSubmitPage() {
                     </select>
                   ) : (
                     <textarea
-                      value={data[key as keyof typeof data] || ""}
+                      value={fieldValue}
                       onChange={(e) => handleFieldChange(key, e.target.value)}
                       className="flex-1 px-4 py-2 rounded-lg bg-background border border-border resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                       rows={key === "description" ? 3 : 1}
@@ -118,15 +168,21 @@ export function ReviewSubmitPage() {
                       {data.urgency}
                     </span>
                   ) : (
-                    <p className="text-foreground font-medium whitespace-pre-wrap">{data[key as keyof typeof data]}</p>
+                    <p className="text-foreground font-medium whitespace-pre-wrap">{fieldValue}</p>
                   )}
                 </div>
               )}
             </div>
-          ))}
+            )
+          })}
         </div>
 
-        {/* Navigation */}
+        {submitError && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
+
         <div className="flex gap-4">
           <button
             onClick={() => router.back()}

@@ -1,55 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { flashModel } from "@/lib/gemini";
+import { predictDepartmentFromInputs } from "@/lib/server/department-classifier";
+
+export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { description, imageBase64, mediaType } = await req.json();
+    const body = await req.json();
+    const description = String(body?.description ?? "").trim();
+    const imageBase64 =
+      typeof body?.imageBase64 === "string" ? body.imageBase64 : undefined;
 
-    const parts: any[] = [];
-
-    if (imageBase64) {
-      parts.push({
-        inlineData: {
-          mimeType: mediaType || "image/jpeg",
-          data: imageBase64,
-        },
-      });
+    if (!description) {
+      return NextResponse.json(
+        { success: false, error: "Description is required for classification." },
+        { status: 400 },
+      );
     }
 
-    parts.push({
-      text: `User description: "${description}"
-
-Return ONLY valid JSON (no markdown, no extra text):
-{
-  "category": "",
-  "department": "",
-  "address": "",
-  "city": "",
-  "pincode": "",
-  "description": "",
-  "urgency": "high | medium | low",
-  "confidence": 0.0
-}
-
-Rules:
-- Pothole/Road → Public Works Department (PWD)
-- Garbage/Waste → Sanitation / Municipal Corporation
-- Broken Streetlight → Electricity Department
-- Water Leak/Flooding → Water Board
-- Encroachment → Town Planning Department
-- Other → General Complaints Cell`,
+    const departmentPrediction = await predictDepartmentFromInputs({
+      description,
+      imageBase64,
     });
 
-    const result = await flashModel.generateContent(parts);
-    const text = result.response.text().trim();
-
-    // Remove markdown fences if present
-    const clean = text.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean);
-
-    return NextResponse.json({ success: true, data: parsed });
-  } catch (err) {
-    console.error("classify error:", err);
-    return NextResponse.json({ success: false, error: "Classification failed" }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      data: departmentPrediction,
+    });
+  } catch (error) {
+    console.error("classify error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Department classification failed.",
+      },
+      { status: 500 },
+    );
   }
 }

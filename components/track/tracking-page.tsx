@@ -1,48 +1,69 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Search, MapPin, Phone, Upload, ThumbsUp } from "lucide-react"
 import { ComplaintDetails } from "./complaint-details"
 import { StatusTimeline } from "./status-timeline"
+import { useAuth } from "@/components/auth-context"
+import { getComplaintLocationLabel } from "@/lib/report-display"
+import type { ComplaintRecord } from "@/lib/types"
 
 export function TrackingPage() {
   const searchParams = useSearchParams()
+  const { user, isLoading: isAuthLoading } = useAuth()
   const [ticketId, setTicketId] = useState(searchParams.get("id") || "")
   const [searchSubmitted, setSearchSubmitted] = useState(!!searchParams.get("id"))
-  const [complaint, setComplaint] = useState<any>(null)
+  const [complaint, setComplaint] = useState<ComplaintRecord | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSearch = (e: React.FormEvent) => {
+  const fetchComplaint = async (nextTicketId: string) => {
+    if (!user) return
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch(
+        `/api/reports/${encodeURIComponent(nextTicketId)}?userEmail=${encodeURIComponent(user.email)}&role=${user.role}`,
+        { cache: "no-store" },
+      )
+      const data = await response.json()
+
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.error || "Complaint not found.")
+      }
+
+      setComplaint(data.report ?? null)
+      setSearchSubmitted(true)
+    } catch (err) {
+      setComplaint(null)
+      setSearchSubmitted(true)
+      setError(err instanceof Error ? err.message : "Complaint not found.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const initialTicketId = searchParams.get("id")
+
+    if (initialTicketId && user) {
+      fetchComplaint(initialTicketId)
+    }
+  }, [searchParams, user])
+
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
     if (ticketId.trim()) {
-      // Simulate API call
-      setComplaint({
-        ticketId,
-        category: "Pothole - Road Damage",
-        description: "Large pothole on Main Street causing traffic issues",
-        location: "Main Street, Market Area, Mumbai 400001",
-        photoUrl: "/pothole.png",
-        status: "In Progress",
-        createdAt: "2 days ago",
-        lastUpdated: "6 hours ago",
-        assignedDepartment: "Mumbai Municipal Corporation (BMC)",
-        officer: {
-          name: "Rajesh Kumar",
-          role: "Senior Officer",
-          phone: "+91 98765 43210",
-        },
-        upvotes: 234,
-        urgency: "High",
-        timeline: [
-          { status: "Submitted", date: "2024-01-18", completed: true },
-          { status: "Assigned", date: "2024-01-18", completed: true },
-          { status: "In Progress", date: "2024-01-19", completed: true },
-          { status: "Resolved", date: "Expected: 2024-01-22", completed: false },
-        ],
-      })
-      setSearchSubmitted(true)
+      await fetchComplaint(ticketId.trim())
     }
+  }
+
+  if (isAuthLoading) {
+    return <div className="py-12 text-center text-muted-foreground">Loading your complaints...</div>
   }
 
   if (!searchSubmitted) {
@@ -77,7 +98,7 @@ export function TrackingPage() {
           <div className="mt-12 text-center text-muted-foreground">
             <p className="text-sm mb-4">Need help finding your ticket ID?</p>
             <p className="text-sm">
-              Check your email confirmation for the ticket ID sent when you submitted your report.
+              Use the ticket ID from your successful report submission screen.
             </p>
           </div>
         </div>
@@ -89,15 +110,20 @@ export function TrackingPage() {
     return (
       <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-background to-secondary flex items-center justify-center py-12">
         <div className="max-w-2xl mx-auto px-4 w-full text-center">
-          <h1 className="text-2xl font-bold mb-2">Complaint not found</h1>
+          <h1 className="text-2xl font-bold mb-2">{isLoading ? "Searching..." : "Complaint not found"}</h1>
           <p className="text-muted-foreground mb-6">
-            The ticket ID you entered could not be found. Please check and try again.
+            {isLoading
+              ? "Please wait while we look up your complaint in the database."
+              : error || "The ticket ID you entered could not be found. Please check and try again."}
           </p>
           <button
-            onClick={() => setSearchSubmitted(false)}
+            onClick={() => {
+              setSearchSubmitted(false)
+              setError(null)
+            }}
             className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90"
           >
-            Try Again
+            {isLoading ? "Searching..." : "Try Again"}
           </button>
         </div>
       </div>
@@ -111,10 +137,9 @@ export function TrackingPage() {
           onClick={() => setSearchSubmitted(false)}
           className="mb-8 text-primary hover:underline font-semibold flex items-center gap-2"
         >
-          ← Search another complaint
+          Search another complaint
         </button>
 
-        {/* Ticket ID and Status Bar */}
         <div className="bg-card rounded-2xl p-8 border border-border mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
@@ -142,11 +167,11 @@ export function TrackingPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground mb-1">Created</p>
-              <p className="font-semibold">{complaint.createdAt}</p>
+              <p className="font-semibold">{new Date(complaint.createdAt).toLocaleString()}</p>
             </div>
             <div>
               <p className="text-muted-foreground mb-1">Updated</p>
-              <p className="font-semibold">{complaint.lastUpdated}</p>
+              <p className="font-semibold">{new Date(complaint.updatedAt).toLocaleString()}</p>
             </div>
             <div>
               <p className="text-muted-foreground mb-1">Upvotes</p>
@@ -172,15 +197,12 @@ export function TrackingPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-2">
             <ComplaintDetails complaint={complaint} />
             <StatusTimeline timeline={complaint.timeline} />
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Department Info */}
             <div className="bg-card rounded-xl p-6 border border-border">
               <h3 className="font-semibold mb-4">Assigned To</h3>
               <p className="text-sm text-muted-foreground mb-4">{complaint.assignedDepartment}</p>
@@ -201,7 +223,6 @@ export function TrackingPage() {
               </div>
             </div>
 
-            {/* Quick Actions */}
             <div className="bg-card rounded-xl p-6 border border-border">
               <h3 className="font-semibold mb-4">Actions</h3>
               <div className="space-y-3">
@@ -211,22 +232,23 @@ export function TrackingPage() {
                 </button>
 
                 <button className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-border text-foreground font-semibold hover:bg-muted transition-colors text-sm">
-                  📧 Contact Assigned Officer
+                  Contact Assigned Officer
                 </button>
 
                 <button className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-border text-foreground font-semibold hover:bg-muted transition-colors text-sm">
-                  🔔 Subscribe to Updates
+                  Subscribe to Updates
                 </button>
               </div>
             </div>
 
-            {/* Map */}
             <div className="bg-card rounded-xl p-6 border border-border">
               <h3 className="font-semibold mb-4">Location</h3>
               <div className="w-full h-48 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg flex items-center justify-center border border-border">
                 <MapPin className="w-8 h-8 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground mt-3">{complaint.location}</p>
+              <p className="text-sm text-muted-foreground mt-3">
+                {getComplaintLocationLabel(complaint)}
+              </p>
             </div>
           </div>
         </div>

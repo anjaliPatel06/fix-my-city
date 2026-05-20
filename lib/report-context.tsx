@@ -2,16 +2,22 @@
 
 import type React from "react"
 import { createContext, useContext, useState } from "react"
+import type { DepartmentPrediction } from "@/lib/types"
 
 export interface ReportData {
   category?: string
   address?: string
+  exactLocation?: string
+  landmark?: string
   city?: string
   pincode?: string
   description?: string
   urgency?: "Low" | "Medium" | "High"
   photoUrl?: string
   tokenId?: string
+  userEmail?: string
+  userName?: string
+  departmentPrediction?: DepartmentPrediction
 }
 
 interface ReportContextType {

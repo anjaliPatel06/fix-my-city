@@ -1,4 +1,3 @@
-// app/profile/page.tsx
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
@@ -6,8 +5,8 @@ import { useAuth } from "@/components/auth-context";
 
 export default function ProfilePage() {
   const { profile, updateProfile } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
 
-  // form state
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -21,7 +20,6 @@ export default function ProfilePage() {
   const [pincode, setPincode] = useState("");
   const [country, setCountry] = useState("");
 
-  // agar pehle se profile saved hai to fields pre-fill karo
   useEffect(() => {
     if (!profile) return;
     setFirstName(profile.firstName || "");
@@ -38,36 +36,42 @@ export default function ProfilePage() {
     setCountry(profile.country || "");
   }, [profile]);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!firstName.trim()) {
-      alert("First name required hai 🙂");
+      alert("First name is required.");
       return;
     }
 
-    updateProfile({
-      firstName: firstName.trim(),
-      middleName: middleName.trim() || undefined,
-      lastName: lastName.trim() || undefined,
-      dob: dob || undefined,
-      gender: gender || undefined,
-      maritalStatus: maritalStatus || undefined,
-      addressLine1: addressLine1.trim() || undefined,
-      addressLine2: addressLine2.trim() || undefined,
-      city: city.trim() || undefined,
-      state: state.trim() || undefined,
-      pincode: pincode.trim() || undefined,
-      country: country.trim() || undefined,
-    });
+    try {
+      setIsSaving(true);
+      await updateProfile({
+        firstName: firstName.trim(),
+        middleName: middleName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+        dob: dob || undefined,
+        gender: gender || undefined,
+        maritalStatus: maritalStatus || undefined,
+        addressLine1: addressLine1.trim() || undefined,
+        addressLine2: addressLine2.trim() || undefined,
+        city: city.trim() || undefined,
+        state: state.trim() || undefined,
+        pincode: pincode.trim() || undefined,
+        country: country.trim() || undefined,
+      });
 
-    alert("Profile saved successfully! 🎉");
+      alert("Profile saved successfully.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Profile save failed.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <main className="flex min-h-[80vh] items-center justify-center px-4 py-10">
       <div className="w-full max-w-3xl rounded-2xl border border-border bg-card/80 shadow-lg">
-        {/* Top Header */}
         <div className="border-b border-border px-6 py-4 flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -77,30 +81,23 @@ export default function ProfilePage() {
               Personal Information
             </h1>
           </div>
-
-         
         </div>
 
-        {/* Info Banner */}
         <div className="px-6 pt-4">
           <div className="mb-4 rounded-xl bg-blue-500/10 border border-blue-500/40 px-4 py-3 text-xs sm:text-sm text-black-100">
             <p className="font-medium">
-              Fields marked with <span className="text-red-400">**</span> will not be changed in
-              future and rest fields can be changed only 2 times.
+              Fill in your correct details because this profile is now stored in the project database.
             </p>
           </div>
         </div>
 
-        {/* Form */}
         <form className="px-6 pb-6 space-y-8" onSubmit={handleSubmit}>
-          {/* Personal Info Section */}
           <section className="space-y-4">
             <h2 className="text-base sm:text-lg font-semibold text-card-foreground">
               Personal Details
             </h2>
 
             <div className="grid gap-4 sm:grid-cols-3">
-              {/* First Name */}
               <div className="sm:col-span-1">
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
                   First Name <span className="text-red-400">*</span>
@@ -114,7 +111,6 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Middle Name */}
               <div className="sm:col-span-1">
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
                   Middle Name
@@ -128,7 +124,6 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Last Name */}
               <div className="sm:col-span-1">
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
                   Last Name
@@ -144,10 +139,9 @@ export default function ProfilePage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
-              {/* Date of Birth */}
               <div className="sm:col-span-1">
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
-                  Date of Birth <span className="text-red-400">**</span>
+                  Date of Birth
                 </label>
                 <input
                   type="date"
@@ -157,10 +151,9 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Gender */}
               <div className="sm:col-span-1">
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
-                  Gender <span className="text-red-400">*</span>
+                  Gender
                 </label>
                 <select
                   value={gender}
@@ -175,10 +168,9 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              {/* Marital Status */}
               <div className="sm:col-span-1">
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
-                  Marital Status <span className="text-red-400">*</span>
+                  Marital Status
                 </label>
                 <select
                   value={maritalStatus}
@@ -195,17 +187,15 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          {/* Address Section */}
           <section className="space-y-4">
             <h2 className="text-base sm:text-lg font-semibold text-card-foreground">
               Address Details
             </h2>
 
             <div className="space-y-3">
-              {/* Address Line 1 */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
-                  Address Line 1 <span className="text-red-400">*</span>
+                  Address Line 1
                 </label>
                 <input
                   type="text"
@@ -216,7 +206,6 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Address Line 2 */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
                   Address Line 2
@@ -232,10 +221,9 @@ export default function ProfilePage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
-              {/* City */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
-                  City <span className="text-red-400">*</span>
+                  City
                 </label>
                 <input
                   type="text"
@@ -246,10 +234,9 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* State */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
-                  State <span className="text-red-400">*</span>
+                  State
                 </label>
                 <input
                   type="text"
@@ -260,10 +247,9 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Pincode */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
-                  Pincode <span className="text-red-400">*</span>
+                  Pincode
                 </label>
                 <input
                   type="text"
@@ -277,10 +263,9 @@ export default function ProfilePage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              {/* Country */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
-                  Country <span className="text-red-400">*</span>
+                  Country
                 </label>
                 <input
                   type="text"
@@ -293,7 +278,6 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
@@ -303,9 +287,10 @@ export default function ProfilePage() {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+              disabled={isSaving}
+              className="px-5 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
             >
-              Save & Continue
+              {isSaving ? "Saving..." : "Save & Continue"}
             </button>
           </div>
         </form>
